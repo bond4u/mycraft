@@ -1,0 +1,39 @@
+<project name="mycraft" default="buildApplet" basedir=".">
+
+	<property name="dir.build" value="build" />
+	<property name="dir.src" value="src" />
+	<property name="dir.classes" value="classes" />
+	<property name="dir.build.classes" value="${dir.build}/${dir.classes}" />
+	<property name="dir.lwjgl" value="../lwjgl-2.6" />
+	<property name="dir.lwjgl.jar" value="${dir.lwjgl}/jar" />
+	<property name="lib.lwjgl" value="${dir.lwjgl.jar}/lwjgl-debug.jar" />
+	<property name="dir.res" value="res" />
+	<property name="jar.dest" value="${dir.build}/mycraft.jar" />
+	
+	<target name="clean">
+		<delete
+			dir="${dir.build}" />
+	</target>
+	
+	<target name="compileApplet" depends="clean">
+		<mkdir
+			dir="${dir.build.classes}" />
+		<javac
+			srcdir="${dir.src}"
+			destdir="${dir.build.classes}"
+			classpath="${lib.lwjgl}" />
+	</target>
+	
+	<target name="copyResources" depends="compileApplet">
+		<copy todir="${dir.build.classes}">
+			<fileset dir="${dir.res}" />
+		</copy>
+	</target>
+	
+	<target name="buildApplet" depends="copyResources">
+		<jar
+			basedir="${dir.build.classes}"
+			destfile="${jar.dest}" />
+	</target>
+	
+</project>
