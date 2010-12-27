@@ -1,4 +1,4 @@
-package com.mycraft.client;
+package org.mycraft.client;
 
 public class Camera {
 
