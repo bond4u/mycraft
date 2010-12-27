@@ -1,4 +1,4 @@
-package com.mycraft.client;
+package org.mycraft.client;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -47,7 +47,7 @@ public class Shape {
 		this.z = z;
 		if (txtr == null) {
 			try {
-				txtr = texLoader.getTexture("com/mycraft/client/cube.png");
+				txtr = texLoader.getTexture("org/mycraft/client/cube.png");
 			} catch (IOException e) {
 				log("texture loading error: " + e);
 			}
