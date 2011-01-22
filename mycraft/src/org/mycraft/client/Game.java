@@ -299,12 +299,13 @@ public class Game extends Thread {
 			log("cam @ " + camPos[0] + "," + camPos[1] + "," + camPos[2] +
 					" > " + camRot[0] + "," + camRot[1] + "," + camRot[2]);
 			
-			FloatBuffer red = BufferUtils.createFloatBuffer(4).put(new float[] { 0.8f, 0.1f, 0.0f, 1.0f});
-			FloatBuffer green = BufferUtils.createFloatBuffer(4).put(new float[] { 0.0f, 0.8f, 0.2f, 1.0f});
-			FloatBuffer blue = BufferUtils.createFloatBuffer(4).put(new float[] { 0.2f, 0.2f, 1.0f, 1.0f});
-			red.flip();
-			green.flip();
-			blue.flip();
+//			FloatBuffer red = BufferUtils.createFloatBuffer(4).put(new float[] { 0.8f, 0.1f, 0.0f, 1.0f});
+//			FloatBuffer green = BufferUtils.createFloatBuffer(4).put(new float[] { 0.0f, 0.8f, 0.2f, 1.0f});
+//			FloatBuffer blue = BufferUtils.createFloatBuffer(4).put(new float[] { 0.2f, 0.2f, 1.0f, 1.0f});
+//			red.flip();
+//			green.flip();
+//			blue.flip();
+			
 //		} catch (Exception e) {
 //			warn("ex: " + e);
 //			running = false;
