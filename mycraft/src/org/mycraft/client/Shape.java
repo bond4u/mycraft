@@ -7,6 +7,7 @@ import java.nio.ByteOrder;
 import org.lwjgl.opengl.ARBBufferObject;
 import org.lwjgl.opengl.ARBVertexBufferObject;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.util.glu.GLU;
 
 public class Shape {
 
@@ -39,8 +40,6 @@ public class Shape {
 	
 	private static int bufId = -1;
 	
-//	private static FloatBuffer mat;
-
 	public Shape(TextureLoader texLoader, float x, float y, float z) {
 		this.x = x;
 		this.y = y;
@@ -54,58 +53,25 @@ public class Shape {
 		}
 		if (bufId == -1) {
 			bufId = ARBBufferObject.glGenBuffersARB();
-			logIfError();
+		    logGlErrorIfAny();
 			ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, bufId);
-			logIfError();
+		    logGlErrorIfAny();
 			// one point consists of a)vertex b)texCoord c)index = everyone in block by itself
 			log("vertices=" + VERTICES_BYTES + ", texCoords=" + TEXCOORDS_BYTES + ", indices=" + INDICES_BYTES);
 			int size = VERTICES_BYTES + TEXCOORDS_BYTES /*+ INDICES_BYTES*/;
-			ARBVertexBufferObject.glBufferDataARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, size,
-					ARBVertexBufferObject.GL_STATIC_DRAW_ARB);
-			logIfError();
+			ARBVertexBufferObject.glBufferDataARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB,
+					size, ARBVertexBufferObject.GL_STATIC_DRAW_ARB);
+		    logGlErrorIfAny();
 			ByteBuffer buf = ARBVertexBufferObject.glMapBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB,
 					ARBVertexBufferObject.GL_WRITE_ONLY_ARB, size, null);
-			logIfError();
+		    logGlErrorIfAny();
 			fillVBO(buf);
-			logIfError();
+		    logGlErrorIfAny();
 			ARBVertexBufferObject.glUnmapBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB);
-			logIfError();
+		    logGlErrorIfAny();
 			ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, 0);
-			logIfError();
+		    logGlErrorIfAny();
 		}
-//		if (vtxBufId == -1) {
-//			vtxBufId = ARBBufferObject.glGenBuffersARB();
-//			ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, vtxBufId);
-//			int size = VERTICES_COUNT * VERTEX_SIZE * shortSize;
-//			ARBVertexBufferObject.glBufferDataARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, size,
-//					ARBVertexBufferObject.GL_STATIC_DRAW_ARB);
-//			ByteBuffer buf = ARBVertexBufferObject.glMapBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB,
-//					ARBVertexBufferObject.GL_WRITE_ONLY_ARB, size, null);
-//			buf = buf.order(ByteOrder.nativeOrder());
-//			fillVertices(buf);
-//			buf.flip();
-//			ARBVertexBufferObject.glUnmapBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB);
-//			ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, 0);
-//		}
-//		if (idxBufId == -1) {
-//			idxBufId = ARBBufferObject.glGenBuffersARB();
-//			ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ELEMENT_ARRAY_BUFFER_ARB, idxBufId);
-//			int size = INDICES_COUNT * QUAD_INDICES_SIZE * byteSize;
-//			ARBVertexBufferObject.glBufferDataARB(ARBVertexBufferObject.GL_ELEMENT_ARRAY_BUFFER_ARB, size,
-//					ARBVertexBufferObject.GL_STATIC_DRAW_ARB);
-//			ByteBuffer buf = ARBVertexBufferObject.glMapBufferARB(ARBVertexBufferObject.GL_ELEMENT_ARRAY_BUFFER_ARB,
-//					ARBVertexBufferObject.GL_WRITE_ONLY_ARB, size, null);
-//			buf = buf.order(ByteOrder.nativeOrder());
-//			fillIndices(buf);
-//			buf.flip();
-//			ARBVertexBufferObject.glUnmapBufferARB(ARBVertexBufferObject.GL_ELEMENT_ARRAY_BUFFER_ARB);
-//			ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
-//		}
-//		if (mat == null) {
-//			mat = BufferUtils.createFloatBuffer(4);
-//			mat.put(new float[] { 1f, 1f, 1f, 1f, }); // 4th=0f=transparent cube/1f=solid cube
-//			mat.flip();
-//		}
 	}
 	
 	protected void fillVBO(ByteBuffer b) {
@@ -209,108 +175,50 @@ public class Shape {
 		return c;
 	}
 	
-//	protected void fillTexCoords(ByteBuffer b) {
-//		// 1. face
-////		b.putFloat(0f).putFloat(0.25f);
-////		b.putFloat(0.25f).putFloat(0.25f);
-////		b.putFloat(0.25f).putFloat(0f);
-////		b.putFloat(0f).putFloat(0f);
-////		b.putFloat(0f).putFloat(0.75f);
-////		b.putFloat(0.25f).putFloat(0.75f);
-////		b.putFloat(0.25f).putFloat(1f);
-////		b.putFloat(0f).putFloat(1f);
-//		for (int i = 1; i <= 6; i++) {
-//			b.putFloat(0f).putFloat(0f);
-//			b.putFloat(1f).putFloat(0f);
-//			b.putFloat(1f).putFloat(1f);
-//			b.putFloat(0f).putFloat(1f);
-//		}
-//		// 2. face
-////		b.putFloat(0.25f).putFloat(0.25f);
-////		b.putFloat(0.5f).putFloat(0.25f);
-////		b.putFloat(0.5f).putFloat(0f);
-////		b.putFloat(0.25f).putFloat(0f);
-////		// 3. face
-////		b.putFloat(0.5f).putFloat(0.25f);
-////		b.putFloat(0.75f).putFloat(0.25f);
-////		b.putFloat(0.75f).putFloat(0f);
-////		b.putFloat(0.5f).putFloat(0f);
-////		// 4. face
-////		b.putFloat(0.75f).putFloat(0.25f);
-////		b.putFloat(1f).putFloat(0.25f);
-////		b.putFloat(1f).putFloat(0f);
-////		b.putFloat(0.75f).putFloat(0f);
-////		// 5. face
-////		b.putFloat(0.75f).putFloat(0.5f);
-////		b.putFloat(1f).putFloat(0.5f);
-////		b.putFloat(1f).putFloat(0.25f);
-////		b.putFloat(0.75f).putFloat(0.25f);
-////		// 6. face
-////		b.putFloat(0.75f).putFloat(0.75f);
-////		b.putFloat(1f).putFloat(0.75f);
-////		b.putFloat(1f).putFloat(0.5f);
-////		b.putFloat(0.75f).putFloat(0.5f);
-//	}
-//	
-//	protected void fillVertices(ByteBuffer b) {
-//		b.putShort((short)-CUBE_DIM).putShort((short)-CUBE_DIM).putShort(CUBE_DIM);
-//		b.putShort(CUBE_DIM).putShort((short)-CUBE_DIM).putShort(CUBE_DIM);
-//		b.putShort(CUBE_DIM).putShort(CUBE_DIM).putShort(CUBE_DIM);
-//		b.putShort((short)-CUBE_DIM).putShort(CUBE_DIM).putShort(CUBE_DIM);
-//		b.putShort(CUBE_DIM).putShort((short)-CUBE_DIM).putShort((short)-CUBE_DIM);
-//		b.putShort((short)-CUBE_DIM).putShort((short)-CUBE_DIM).putShort((short)-CUBE_DIM);
-//		b.putShort((short)-CUBE_DIM).putShort(CUBE_DIM).putShort((short)-CUBE_DIM);
-//		b.putShort(CUBE_DIM).putShort(CUBE_DIM).putShort((short)-CUBE_DIM);
-//	}
-//	
-//	protected void fillIndices(ByteBuffer b) {
-//		short[][] i = indices();
-//		for (short[] a : i) {
-//			for (short v : a) {
-//				b.put((byte)v);
-//			}
-//		}
-//	}
-	
 	public void draw() {
 	    GL11.glPushMatrix();
-	    GL11.glTranslatef(x, y, z);
+	    logGlErrorIfAny();
 	    
-//		GL11.glShadeModel(GL11.GL_SMOOTH);
-//		GL11.glMaterial(GL11.GL_FRONT, GL11.GL_AMBIENT_AND_DIFFUSE, mat);
+	    GL11.glScalef(0.5f, 0.5f, 0.5f);
+	    logGlErrorIfAny();
+	    GL11.glTranslatef(x, y, z);
+	    logGlErrorIfAny();
+	    
+	    GL11.glColor4f(1f, 1f, 1f, 1f);
+	    logGlErrorIfAny();
 	    txtr.bind();
 	    
 	    GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
+	    logGlErrorIfAny();
 	    GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-//	    GL11.glEnableClientState(GL11.GL_INDEX_ARRAY);
+	    logGlErrorIfAny();
 	    
-//	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, txcBufId);
-//	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, vtxBufId);
-//	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ELEMENT_ARRAY_BUFFER_ARB, idxBufId);
 	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, bufId);
+	    logGlErrorIfAny();
 	    
-//	    GL11.glTexCoordPointer(TEXCOORD_SIZE, GL11.GL_FLOAT, /*4 * TEXCOORD_SIZE * floatSize*/0, 0);
-//	    GL11.glNormalPointer(GL11.GL_FLOAT, 0, 0);
-//	    GL11.glVertexPointer(VERTEX_SIZE, GL11.GL_SHORT, /*VERTEX_SIZE * shortSize*/0, 0);
-//	    GL11.glDrawElements(GL11.GL_QUADS, INDICES_COUNT * QUAD_INDICES_SIZE * byteSize, GL11.GL_UNSIGNED_BYTE, 0);
 	    GL11.glTexCoordPointer(TEXCOORD_SIZE, GL11.GL_FLOAT, 0, VERTICES_BYTES);
+	    logGlErrorIfAny();
 	    GL11.glVertexPointer(VERTEX_SIZE, GL11.GL_SHORT, 0, 0);
+	    logGlErrorIfAny();
 	    GL11.glDrawArrays(GL11.GL_QUADS, 0, VERTICES_COUNT);
+	    logGlErrorIfAny();
 	    
-//	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
 	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, 0);
-//	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_BINDING_ARB, 0);
+	    logGlErrorIfAny();
 	    
-//	    GL11.glDisableClientState(GL11.GL_INDEX_ARRAY);
 	    GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
+	    logGlErrorIfAny();
 	    GL11.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
+	    logGlErrorIfAny();
 	    
 	    GL11.glPopMatrix();
+	    logGlErrorIfAny();
 	}
 	
 	public void destroy() {
 		if (bufId != -1) {
 			ARBVertexBufferObject.glDeleteBuffersARB(bufId);
+		    logGlErrorIfAny();
 			bufId = -1;
 		}
 		if (txtr != null) {
@@ -319,13 +227,13 @@ public class Shape {
 	}
 	
 	private void log(String s) {
-		System.out.println(s);
+		System.out.println(Thread.currentThread().getName() + ": " + s);
 	}
 	
-	private void logIfError() {
+	private void logGlErrorIfAny() {
 		final int e = GL11.glGetError();
 		if (e != 0) {
-			log("err=" + e);
+			log("err=" + e + ": " + GLU.gluErrorString(e));
 		}
 	}
 	

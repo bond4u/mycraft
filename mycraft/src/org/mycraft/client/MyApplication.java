@@ -4,7 +4,7 @@ public class MyApplication {
 	
 	public static void main(String[] args) {
 		// do it
-		new Game().run();
+		new Game().start();
 	}
 	
 }

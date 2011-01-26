@@ -4,6 +4,7 @@ import java.awt.Canvas;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
@@ -34,6 +35,8 @@ public class Game extends Thread {
 	private Camera cam;
 	
 	private List<Shape> shapes;
+	
+	private Terrain terra;
 	
 	private float fovy = 60f;
 	private float zNear = 1f;
@@ -100,6 +103,7 @@ public class Game extends Thread {
 		initDisplay();
 		texLoader = new TextureLoader();
 		cam = new Camera();
+		terra = new Terrain(new Random(5432543));
 		shapes = new ArrayList<Shape>();
 		initGL();
 		initWorld();
@@ -195,11 +199,11 @@ public class Game extends Thread {
 //	}
 	
 	public void log(String s) {
-		System.out.println(s);
+		System.out.println(Thread.currentThread().getName() + ": " + s);
 	}
 	
 	public void warn(String s) {
-		System.out.println(s);
+		System.out.println(Thread.currentThread().getName() + ": " + s);
 	}
 	
 	public void logGlErrorIfAny() {
@@ -212,28 +216,28 @@ public class Game extends Thread {
 	protected void initGL() {
 //		try {
 			// setup ogl
-			GL11.glEnable(GL11.GL_LIGHT0);
-			logGlErrorIfAny();
-			GL11.glEnable(GL11.GL_LIGHTING);
-			logGlErrorIfAny();
+//			GL11.glEnable(GL11.GL_LIGHT0);
+//			logGlErrorIfAny();
+//			GL11.glEnable(GL11.GL_LIGHTING);
+//			logGlErrorIfAny();
 			GL11.glEnable(GL11.GL_CULL_FACE); // dont render hidden/back faces
 			logGlErrorIfAny();
-			GL11.glEnable(GL11.GL_DEPTH_TEST);
-			logGlErrorIfAny();
 			GL11.glDepthFunc(GL11.GL_LEQUAL); // depth test type
+			logGlErrorIfAny();
+			GL11.glEnable(GL11.GL_DEPTH_TEST);
 			logGlErrorIfAny();
 			GL11.glEnable(GL11.GL_TEXTURE_2D);
 			logGlErrorIfAny();
 //			glEnable(GL_COLOR_MATERIAL);
-			GL11.glEnable(GL11.GL_BLEND); // enable transparency
-			logGlErrorIfAny();
-			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA); // avg colors together
-			logGlErrorIfAny();
+//			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA); // avg colors together
+//			logGlErrorIfAny();
+//			GL11.glEnable(GL11.GL_BLEND); // enable transparency
+//			logGlErrorIfAny();
 //			glEnable(GL_NORMALIZE); // forces normals to size of 1
-			GL11.glEnable(GL11.GL_ALPHA_TEST); // enable transparency in textures
-			logGlErrorIfAny();
-			GL11.glAlphaFunc(GL11.GL_GREATER, 0f);
-			logGlErrorIfAny();
+//			GL11.glAlphaFunc(GL11.GL_GREATER, 0f);
+//			logGlErrorIfAny();
+//			GL11.glEnable(GL11.GL_ALPHA_TEST); // enable transparency in textures
+//			logGlErrorIfAny();
 			GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
 			logGlErrorIfAny();
 			
@@ -358,6 +362,8 @@ public class Game extends Thread {
 		
 		GL11.glPushMatrix();
 		logGlErrorIfAny();
+		
+		terra.draw();
 		
 		FloatBuffer white = BufferUtils.createFloatBuffer(4).put(new float[] { 1f, 1f, 1f, 1f, });
 		white.flip();

@@ -74,6 +74,6 @@ public class Camera {
 	}
 	
 	private void log(String s) {
-		System.out.println(s);
+		System.out.println(Thread.currentThread().getName() + ": " + s);
 	}
 }

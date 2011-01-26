@@ -54,6 +54,7 @@ import javax.swing.ImageIcon;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.util.glu.GLU;
 
 /**
  * A utility class to load textures for OpenGL. This source is based
@@ -69,6 +70,7 @@ import org.lwjgl.opengl.GL11;
  * @author Brian Matzon
  */
 public class TextureLoader {
+	
     /** The table of textures that have been loaded in this loader */
     private HashMap<String, Texture> table = new HashMap<String, Texture>();
 
@@ -107,6 +109,7 @@ public class TextureLoader {
      */
     private int createTextureID() {
       GL11.glGenTextures(textureIDBuffer);
+      logGlErrorIfAny();
       return textureIDBuffer.get(0);
     }
 
@@ -160,6 +163,7 @@ public class TextureLoader {
 
         // bind this texture
         GL11.glBindTexture(target, textureID);
+        logGlErrorIfAny();
 
         BufferedImage bufferedImage = loadImage(resourceName);
         texture.setWidth(bufferedImage.getWidth());
@@ -176,7 +180,9 @@ public class TextureLoader {
 
         if (target == GL11.GL_TEXTURE_2D) {
         	GL11.glTexParameteri(target, GL11.GL_TEXTURE_MIN_FILTER, minFilter);
+        	logGlErrorIfAny();
         	GL11.glTexParameteri(target, GL11.GL_TEXTURE_MAG_FILTER, magFilter);
+        	logGlErrorIfAny();
         }
 
         // produce a texture from the byte buffer
@@ -189,6 +195,7 @@ public class TextureLoader {
                       srcPixelFormat,
                       GL11.GL_UNSIGNED_BYTE,
                       textureBuffer );
+        logGlErrorIfAny();
 
         return texture;
     }
@@ -287,4 +294,16 @@ public class TextureLoader {
 
         return bufferedImage;
     }
+    
+	private void log(String s) {
+		System.out.println(Thread.currentThread().getName() + ": " + s);
+	}
+	
+	private void logGlErrorIfAny() {
+		final int e = GL11.glGetError();
+		if (e != 0) {
+			log("err=" + e + ": " + GLU.gluErrorString(e));
+		}
+	}
+
 }

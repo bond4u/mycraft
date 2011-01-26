@@ -31,11 +31,11 @@ public class MyApplet extends Applet {
 	}
 
 	private void log(String s) {
-		System.out.println(s);
+		System.out.println(Thread.currentThread().getName() + ": " + s);
 	}
 	
 	private void warn(String s) {
-		System.err.println(s);
+		System.err.println(Thread.currentThread().getName() + ": " + s);
 	}
 	
 	/**
