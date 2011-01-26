@@ -33,6 +33,9 @@ package org.mycraft.client;
 
 import static org.lwjgl.opengl.GL11.*;
 
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.util.glu.GLU;
+
 /**
  * A texture to be bound within OpenGL. This object is responsible for
  * keeping track of a given OpenGL texture and for calculating the
@@ -88,6 +91,7 @@ public class Texture {
 	 */
 	public void bind() {
 		glBindTexture(target, textureID);
+		logGlErrorIfAny();
 	}
 
 	/**
@@ -185,4 +189,16 @@ public class Texture {
 			widthRatio = ((float) width) / texWidth;
 		}
 	}
+	
+	private void log(String s) {
+		System.out.println(Thread.currentThread().getName() + ": " + s);
+	}
+	
+	private void logGlErrorIfAny() {
+		final int e = GL11.glGetError();
+		if (e != 0) {
+			log("err=" + e + ": " + GLU.gluErrorString(e));
+		}
+	}
+
 }
