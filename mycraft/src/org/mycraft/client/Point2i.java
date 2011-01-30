@@ -28,4 +28,7 @@ public class Point2i implements Comparable<Point2i>, Comparator<Point2i> {
 		return compareTo(p) == 0;
 	}
 	
+	public String toString() {
+		return "Point2i:[x=" + this.x + ";y=" + this.y + "]";
+	}
 }

@@ -57,7 +57,7 @@ public class Shape {
 			ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, bufId);
 		    logGlErrorIfAny();
 			// one point consists of a)vertex b)texCoord c)index = everyone in block by itself
-			log("vertices=" + VERTICES_BYTES + ", texCoords=" + TEXCOORDS_BYTES + ", indices=" + INDICES_BYTES);
+//			log("vertices=" + VERTICES_BYTES + ", texCoords=" + TEXCOORDS_BYTES + ", indices=" + INDICES_BYTES);
 			int size = VERTICES_BYTES + TEXCOORDS_BYTES /*+ INDICES_BYTES*/;
 			ARBVertexBufferObject.glBufferDataARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB,
 					size, ARBVertexBufferObject.GL_STATIC_DRAW_ARB);
@@ -90,7 +90,7 @@ public class Shape {
 				}
 			}
 		}
-		log("vertices=" + cnt + " shorts");
+//		log("vertices=" + cnt + " shorts");
 		final float[][][] tc = texCoords();
 		cnt = 0;
 		for (int face = 0; face < FACES_COUNT; face++) {
@@ -103,7 +103,7 @@ public class Shape {
 				}
 			}
 		}
-		log("texCoords=" + cnt + " floats");
+//		log("texCoords=" + cnt + " floats");
 		b.flip();
 	}
 	
