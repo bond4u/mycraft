@@ -12,7 +12,7 @@ public class Camera {
 	private final double saz = 0.25;
 	// camera location
 	private double x = 0.0;
-	private double y = 0.0;
+	private double y = 6.0;
 	private double z = 12.0;
 	// camera orientation
 	private double ax = 0.0;

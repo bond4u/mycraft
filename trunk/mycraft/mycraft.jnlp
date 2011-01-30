@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp
+	spec="1.0+"
+	codebase="http://www.hot.ee/bond4u/mycraft"
+	href="mycraft.jnlp">
+	<information>
+		<title>MyCraft</title>
+		<vendor>bond</vendor>
+		<homepage href="http://www.hot.ee/bond4u" />
+		<description>Playing around with LWJGL & OpenGL</description>
+	</information>
+	<!--security>
+		<all-permissions/>
+	</security-->
+	<resources>
+		<j2se version="1.6+" />
+		<jar href="mycraft.jar" main="true" />
+		<jar href="lwjgl.jar" />
+		<jar href="AppleJavaExtensions.jar" />
+		<jar href="jinput.jar" />
+		<jar href="lwjgl_util.jar" />
+		<jar href="windows_natives.jar" />
+	</resources>
+	<application-desc
+		main-class="org.mycraft.client.MyApplication" />
+	<update
+		check="background" />
+</jnlp>

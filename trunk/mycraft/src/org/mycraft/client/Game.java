@@ -36,7 +36,7 @@ public class Game extends Thread {
 	
 	private List<Shape> shapes;
 	
-	private Terrain terra;
+	private Terrain land;
 	
 	private float fovy = 60f;
 	private float zNear = 1f;
@@ -68,7 +68,7 @@ public class Game extends Thread {
 		if (canvas != null) { // applet - browser window
 			try {
 				Display.setParent(canvas);
-				logGlErrorIfAny();
+//				logGlErrorIfAny();
 			} catch (LWJGLException e) {
 				log("LWJGL.setParent: " + e);
 			}
@@ -103,7 +103,7 @@ public class Game extends Thread {
 		initDisplay();
 		texLoader = new TextureLoader();
 		cam = new Camera();
-		terra = new Terrain(new Random(5432543));
+		land = new Terrain(new Random(5432543));
 		shapes = new ArrayList<Shape>();
 		initGL();
 		initWorld();
@@ -249,9 +249,9 @@ public class Game extends Thread {
 			logGlErrorIfAny();
 			warn("GL_VERSION: " + GL11.glGetString(GL11.GL_VERSION));
 			logGlErrorIfAny();
-			warn("");
-			warn("glLoadTransposeMatrixfARB() supported: " + GLContext.getCapabilities().GL_ARB_transpose_matrix);
-			logGlErrorIfAny();
+//			warn("");
+//			warn("glLoadTransposeMatrixfARB() supported: " + GLContext.getCapabilities().GL_ARB_transpose_matrix);
+//			logGlErrorIfAny();
 			
 			// canvas
 			GL11.glViewport(0, 0, getWidth(), getHeight());
@@ -322,22 +322,25 @@ public class Game extends Thread {
 	
 	private void initWorld() {
 		// Y is "up"
-		shapes.add(new Shape(texLoader, 0, 0, 0));
-		shapes.add(new Shape(texLoader, 4, 0, 0));
-		shapes.add(new Shape(texLoader, 0, 0, 4));
-		shapes.add(new Shape(texLoader, -4, 0, 0));
-		shapes.add(new Shape(texLoader, 0, 0, -4));
-		shapes.add(new Shape(texLoader, 0, 4, 0));
-		shapes.add(new Shape(texLoader, 0, -4, 0));
+		land.create();
+		land.init();
+		int baseY = 10;
+		shapes.add(new Shape(texLoader, 0, baseY, 0));
+		shapes.add(new Shape(texLoader, 2, baseY, 0));
+		shapes.add(new Shape(texLoader, 0, baseY, 2));
+		shapes.add(new Shape(texLoader, -2, baseY, 0));
+		shapes.add(new Shape(texLoader, 0, baseY, -2));
+		shapes.add(new Shape(texLoader, 0, baseY+3, 0));
+		shapes.add(new Shape(texLoader, 0, baseY-3, 0));
 		
-		shapes.add(new Shape(texLoader, 4, 4, 4));
-		shapes.add(new Shape(texLoader, 4, 4, -4));
-		shapes.add(new Shape(texLoader, 4, -4, 4));
-		shapes.add(new Shape(texLoader, 4, -4, -4));
-		shapes.add(new Shape(texLoader, -4, -4, -4));
-		shapes.add(new Shape(texLoader, -4, -4, 4));
-		shapes.add(new Shape(texLoader, -4, 4, 4));
-		shapes.add(new Shape(texLoader, -4, 4, -4));
+		shapes.add(new Shape(texLoader, 3, baseY+3, 3));
+		shapes.add(new Shape(texLoader, 3, baseY+3, -3));
+		shapes.add(new Shape(texLoader, 3, baseY-3, 3));
+		shapes.add(new Shape(texLoader, 3, baseY-3, -3));
+		shapes.add(new Shape(texLoader, -2, baseY-2, -2));
+		shapes.add(new Shape(texLoader, -2, baseY-2, 2));
+		shapes.add(new Shape(texLoader, -2, baseY+2, 2));
+		shapes.add(new Shape(texLoader, -2, baseY+2, -2));
 	}
 	
 	private void drawWorld() {
@@ -363,7 +366,7 @@ public class Game extends Thread {
 		GL11.glPushMatrix();
 		logGlErrorIfAny();
 		
-		terra.draw();
+		land.draw();
 		
 		FloatBuffer white = BufferUtils.createFloatBuffer(4).put(new float[] { 1f, 1f, 1f, 1f, });
 		white.flip();
@@ -381,6 +384,7 @@ public class Game extends Thread {
 			s.destroy();
 		}
 		shapes.clear();
+		land.destroy();
 	}
 	
 }

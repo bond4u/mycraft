@@ -1,4 +1,4 @@
-<project name="mycraft" default="buildApplet" basedir=".">
+<project name="mycraft" default="build" basedir=".">
 
 	<property name="dir.build" value="build" />
 	<property name="dir.src" value="src" />
@@ -7,32 +7,41 @@
 	<property name="dir.lwjgl" value="../lwjgl-2.6" />
 	<property name="dir.lwjgl.jar" value="${dir.lwjgl}/jar" />
 	<property name="lib.lwjgl" value="${dir.lwjgl.jar}/lwjgl-debug.jar" />
+	<property name="lib.lwjgl-util" value="${dir.lwjgl.jar}/lwjgl_util.jar" />
 	<property name="dir.res" value="res" />
 	<property name="jar.dest" value="${dir.build}/mycraft.jar" />
+	<property name="file.manifest" value="manifest.mf" />
+	
+	<path id="cp">
+		<pathelement path="${lib.lwjgl}" />
+		<pathelement path="${lib.lwjgl-util}" />
+	</path>
 	
 	<target name="clean">
 		<delete
 			dir="${dir.build}" />
 	</target>
 	
-	<target name="compileApplet" depends="clean">
+	<target name="compile" depends="clean">
 		<mkdir
 			dir="${dir.build.classes}" />
 		<javac
+			debug="true"
 			srcdir="${dir.src}"
 			destdir="${dir.build.classes}"
-			classpath="${lib.lwjgl}" />
+			classpathref="cp" />
 	</target>
 	
-	<target name="copyResources" depends="compileApplet">
+	<target name="copyResources">
 		<copy todir="${dir.build.classes}">
 			<fileset dir="${dir.res}" />
 		</copy>
 	</target>
 	
-	<target name="buildApplet" depends="copyResources">
+	<target name="build" depends="compile, copyResources">
 		<jar
 			basedir="${dir.build.classes}"
+			manifest="${basedir}/${file.manifest}"
 			destfile="${jar.dest}" />
 	</target>
 	
