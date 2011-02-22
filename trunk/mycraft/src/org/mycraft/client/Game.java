@@ -38,9 +38,9 @@ public class Game extends Thread {
 	
 	private Terrain land;
 	
-	private float fovy = 60f;
-	private float zNear = 1f;
-	private float zFar = 51f;
+	private float fovy = 75f;
+	private float zNear = 0.5f;
+	private float zFar = 95.5f;
 
 	public int getWidth() {
 		return WIDTH;

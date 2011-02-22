@@ -1,16 +1,17 @@
 package org.mycraft.client;
 
 import java.nio.ByteBuffer;
-import java.util.Random;
+//import java.util.Random;
 
 import org.lwjgl.opengl.ARBBufferObject;
 import org.lwjgl.opengl.ARBVertexBufferObject;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
+import org.noise.IFunc2D;
 
 public class Block {
 	
-	public static final int DIM = 9; // block dimension - 5 rows & 5 columns
+	private static final int DIM = 15; // block dimensions = center + 4 rows & 4 columns
 	// vertex data
 	private static final int BYTES_PER_SHORT = 2; // 2 bytes per element
 	private static final int ELEM_PER_VERTEX = 3; // 3 elements per vertex
@@ -29,33 +30,70 @@ public class Block {
 	private final Terrain t;
 	private final int x;
 	private final int y;
-	private final Random rnd;
+//	private final Random rnd;
+	private final IFunc2D func;
 	private final short data[][];
 	private final int bufId;
+	private short lowest;
+	private short highest;
 	
 	private int facesCount;
 	private int vertexBytes;
 	private int colorBytes;
 	
-	public Block(Terrain t, int x, int y, Random rnd) {
+	public Block(Terrain t, int x, int y/*, Random rnd*/, IFunc2D f) {
 		this.t = t;
 		this.x = x;
 		this.y = y;
-		this.rnd = rnd;
+//		this.rnd = rnd;
+		this.func = f;
 		this.data = gen();
 		this.bufId = createVBO();
 //		initVBO();
 	}
 	
+	public static short getDim() {
+		return DIM;
+	}
+	
 	private short[][] gen() {
+		lowest = Short.MAX_VALUE;
+		highest = Short.MIN_VALUE;
 		final short d = (DIM - 1) / 2;
 		final short[][] a = new short[DIM][DIM];
-		for (int x = 0; x < DIM; x++) {
-			for (int y = 0; y < DIM; y++) {
-				a[x][y] = (short) (rnd.nextInt(DIM) - d);
+		float[] fmm = new float[2];
+		for (int x2 = 0; x2 < DIM; x2++) {
+			for (int y2 = 0; y2 < DIM; y2++) {
+//				a[x2][y2] = (short) (rnd.nextInt(DIM) - d);
+				float x3 = x + (x2 - d);
+				float y3 = y + (y2 - d);
+//				log("[" + x2 + "," + y2 + "] = [" + x3 + "," + y3 + "]");
+				float v = func.get(x3, y3);
+				if (v < fmm[0]) {
+					fmm[0] = v;
+				} else if (v > fmm[1]) {
+					fmm[1] = v;
+				}
+				short h = (short) v;
+				if (h < lowest) {
+					lowest = h;
+				} else if (h > highest) {
+					highest = h;
+				}
+				a[x2][y2] = h;
 			}
 		}
+//		log("fmm=" + fmm[0] + "," + fmm[1] + "; smm=" + lowest + "," + highest);
+		assert lowest == highest : "flat block";
 		return a;
+	}
+	
+	public short lowest() {
+		return lowest;
+	}
+	
+	public short highest() {
+		return highest;
 	}
 	
 	private int createVBO() {
@@ -167,11 +205,16 @@ public class Block {
 				}
 			}
 		}
-		final int step = 256 / DIM;
-		final int base = (1 + (DIM - 1) / 2) * step;
+		short len = (short) (t.highest() - t.lowest());
+		assert len == 0 : "terrain has no height";
+		//final int step = 256 / DIM;
+		final int step = 255 / len;
+		//final int base = (1 + (len/*DIM*/ - 1) / 2) * step;
+		final int base = -t.lowest() * step;
 		for (int x = 0; x < DIM; x++) {
 			for (int y = 0; y < DIM; y++) {
 				final short height = (short) data[x][y];
+				assert height > t.highest() : "block has higher quad than terrain";
 				// rgb for each quad corner
 				b.put((byte) 0);
 				b.put((byte) (base + height * step));
@@ -275,8 +318,10 @@ public class Block {
 		final short d = (DIM - 1) / 2;
 		final int dx = x + d - this.x;
 		final int dy = y + d - this.y;
-		assert Math.abs(this.x - x) <= 4 : "x must not differ more than 4";
-		assert Math.abs(this.y - y) <= 4 : "y must not differ more than 4";
+		assert Math.abs(this.x - x) <= d : "x must not differ more than 4";
+		assert Math.abs(this.y - y) <= d : "y must not differ more than 4";
+		assert dx >= 0 && dx < DIM : "x idx out of array";
+		assert dy >= 0 && dy < DIM : "y idx out of array";
 		final short h = data[dx][dy];
 		return h;
 	}
