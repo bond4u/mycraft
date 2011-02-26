@@ -66,7 +66,7 @@ public class MyApplet extends Applet {
 				}
 			};
 			game.setCanvas(gameCanvas);
-			log("canvas size: " + gameCanvas.getWidth() + "x" + gameCanvas.getHeight());
+//			log("canvas size: " + gameCanvas.getWidth() + "x" + gameCanvas.getHeight());
 //			gameCanvas.setSize(game.getWidth(),game.getHeight());
 			add(gameCanvas);
 			gameCanvas.setFocusable(true);

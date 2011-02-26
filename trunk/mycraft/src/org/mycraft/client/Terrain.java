@@ -97,9 +97,16 @@ public class Terrain {
 	}
 	
 	public void draw() {
+//		long start = System.currentTimeMillis();
+		int cnt = 0;
 		for (Block b : getMap().values()) {
 			b.draw();
+			cnt++;
 		}
+//		long duration = System.currentTimeMillis() - start;
+//		if (duration > 1000 / 60) {
+//			log("terrain.draw " + cnt + " blocks in " + duration + " ms");
+//		}
 	}
 	
 	public void destroy() {

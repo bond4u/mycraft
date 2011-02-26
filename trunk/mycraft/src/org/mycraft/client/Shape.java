@@ -1,6 +1,5 @@
 package org.mycraft.client;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -8,6 +7,7 @@ import org.lwjgl.opengl.ARBBufferObject;
 import org.lwjgl.opengl.ARBVertexBufferObject;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
+import org.newdawn.slick.opengl.Texture;
 
 public class Shape {
 
@@ -40,16 +40,12 @@ public class Shape {
 	
 	private static int bufId = -1;
 	
-	public Shape(TextureLoader texLoader, float x, float y, float z) {
+	public Shape(Textures texs, float x, float y, float z) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
 		if (txtr == null) {
-			try {
-				txtr = texLoader.getTexture("org/mycraft/client/cube.png");
-			} catch (IOException e) {
-				log("texture loading error: " + e);
-			}
+			txtr = texs.get("org/mycraft/client/cube.png");
 		}
 		if (bufId == -1) {
 			bufId = ARBBufferObject.glGenBuffersARB();
