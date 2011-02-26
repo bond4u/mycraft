@@ -11,7 +11,8 @@ import org.noise.IFunc2D;
 
 public class Block {
 	
-	private static final int DIM = 15; // block dimensions = center + 4 rows & 4 columns
+	private static final int DIM = 15; // block dimensions
+	// = center + x rows & x columns & x layers
 	// vertex data
 	private static final int BYTES_PER_SHORT = 2; // 2 bytes per element
 	private static final int ELEM_PER_VERTEX = 3; // 3 elements per vertex
@@ -96,7 +97,7 @@ public class Block {
 		return highest;
 	}
 	
-	private int createVBO() {
+	protected int createVBO() {
 		final int id = ARBBufferObject.glGenBuffersARB();
 		logGlErrorIfAny();
 		return id;
@@ -205,12 +206,12 @@ public class Block {
 				}
 			}
 		}
-		short len = (short) (t.highest() - t.lowest());
-		assert len == 0 : "terrain has no height";
+		final float len = (short) (t.highest() - t.lowest());
+		assert len == 0f : "terrain has no height";
 		//final int step = 256 / DIM;
-		final int step = 255 / len;
+		final float step = 255 / len;
 		//final int base = (1 + (len/*DIM*/ - 1) / 2) * step;
-		final int base = -t.lowest() * step;
+		final float base = -t.lowest() * step;
 		for (int x = 0; x < DIM; x++) {
 			for (int y = 0; y < DIM; y++) {
 				final short height = (short) data[x][y];
@@ -312,6 +313,18 @@ public class Block {
 		final int landY = this.y - d + y; // 0 -> -4
 		short h = t.getHeightAt(landX, landY);
 		return h;
+	}
+	
+	public static Point2i calcCenter(int x, int y) {
+		final short d = (DIM - 1) / 2; // -8+7=-1/15=-1
+		final int x1 = x + d + (x < -d ? 1 : 0);
+		final int y1 = y + d + (y < -d ? 1 : 0);
+		final int x2 = x1 / DIM; // -7+7=0/15=0
+		final int y2 = y1 / DIM; // 0+7=7/15=0
+		final int x3 = x2 - (x < -d ? 1 : 0); // neg bonus
+		final int y3 = y2 - (y < -d ? 1 : 0);
+//		System.out.println("x=" + x + " y=" + y + " xc=" + xc + " yc=" + yc);
+		return new Point2i(x3 * DIM, y3 * DIM); // 8+7=15/15=1
 	}
 	
 	public short getHeightAt(int x, int y) {

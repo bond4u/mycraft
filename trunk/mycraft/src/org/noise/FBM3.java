@@ -2,7 +2,7 @@ package org.noise;
 
 import java.util.Random;
 
-public class FBM implements IFbm2D {
+public class FBM3 implements IFbm3D {
 	
 	private int[] ms_p = new int[512];
 	
@@ -10,7 +10,7 @@ public class FBM implements IFbm2D {
 	private float lac;
 	private float gain;
 	
-	public FBM(Random s) {
+	public FBM3(Random s) {
 		int nbVals = (1 << 8);
 		int[] ms_perm = new int[nbVals];
 		for (int i = 0; i < nbVals; i++) {
@@ -45,29 +45,26 @@ public class FBM implements IFbm2D {
 	}
 	
 	@Override
-	public float get(float x, float y) {
-		//fBm(double x, double y, double z, int octaves, float lacunarity, float gain)
+	public float get(float x, float y, float z) {
 		float freq = 1.0f;
 		float ampl = 0.5f;
 		float sum = 0.0f;
 
 		for (int i = 0; i < oct; i++) {
-			sum += noise(x * freq, y * freq/*, z * freq*/) * ampl;
+			sum += noise(x * freq, y * freq, z * freq) * ampl;
 			freq *= lac;
 			ampl *= gain;
 		}
 		return sum;
 	}
 	
-	protected float noise(float x, float y) {
-		//noise (double x, double y, double z)
-		int z = 0; // no 3rd dim
-		int X = (int)x & 255;
-		int Y = (int)y & 255;
-		int Z = (int)z & 255;
-		x -= Math.floor(x);  
-		y -= Math.floor(y);  
-		z -= Math.floor(z);  
+	protected float noise(float x, float y, float z) {
+		int X = (int)Math.floor(x) & 255;
+		int Y = (int)Math.floor(y) & 255;
+		int Z = (int)Math.floor(z) & 255;
+		x -= Math.floor(x);
+		y -= Math.floor(y);
+		z -= Math.floor(z);
 		float u = fade(x);
 		float v = fade(y);
 		float w = fade(z);
@@ -95,18 +92,37 @@ public class FBM implements IFbm2D {
 	}
 	
 	protected float fade(float t) {
-		return (t * t * t * (t * (t * 6 - 15) + 10));
+		float r = (t * t * t * (t * (t * 6 - 15) + 10));
+		return r;
 	}
 	
 	protected float lerp(float t, float a, float b) {
-		return (a + t * (b - a));
+		float d = b - a;
+		float r = (a + t * d);
+		return r;
     }
 	
 	protected float grad(int hash, float x, float y, float z) {
 		int h = hash & 15;
-		float u = h<8 ? x : y;
-		float v = h<4 ? y : h==12||h==14 ? x : z;
-		return ((h&1) == 0 ? u : -u) + ((h&2) == 0 ? v : -v);
+		float u = (h < 8) ? x : y;
+		float v = (h < 4) ? y : (h == 12 || h == 14 ? x : z);
+		return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
+	}
+	
+//	private float turbulence(float x, float y, float z, float minFreq, float maxFreq) {
+//		float r = 0f;
+//		x = x + 123.456f;
+//		for (float freq = minFreq; freq < maxFreq; freq = 2f * freq) {
+//			r += Math.abs(noise(x, y, z)) / freq;
+//			x = x * 2f;
+//			y = y * 2f;
+//			z = z * 2f;
+//		}
+//		return r - 0.3f;
+//	}
+	
+	protected void log(String s) {
+		System.out.println(s);
 	}
 	
 }

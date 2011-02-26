@@ -23,15 +23,26 @@ public class Terrain {
 	
 	public Terrain(Random r) {
 //		rnd = r;
-		func = new Ground(r);
+		func = createFunc(r); //new Ground(r);
 		comp = new Point2i(0, 0);
 		blocks = new TreeMap<Point2i, Block>(comp);
 //		init();
 	}
 	
+	protected IFunc2D createFunc(Random r) {
+		return new Ground(r);
+	}
+	
+	protected IFunc2D getFunc() {
+		return func;
+	}
+	
+	protected Map<Point2i, Block> getMap() {
+		return blocks;
+	}
+	
 	public void create() {
-		lowest = Short.MAX_VALUE;
-		highest = Short.MIN_VALUE;
+		resetLowHigh();
 		short blkDim = Block.getDim();
 		final long startTime = System.currentTimeMillis();
 		for (int x = -DIM / 2; x <= DIM / 2; x++) {
@@ -40,21 +51,32 @@ public class Terrain {
 				final int yy = y * blkDim;
 //				log("p=" + xx + "x" + yy);
 				Point2i p = new Point2i(xx, yy);
-				Block b = new Block(this, xx, yy/*, rnd*/, func);
-				blocks.put(p, b);
-				short l = b.lowest();
-				if (l < lowest) {
-					lowest = l;
-				}
-				short h = b.highest();
-				if (h > highest) {
-					highest = h;
-				}
+				Block b = createBlock(xx, yy);
+				getMap().put(p, b);
+				checkLowHigh(b.lowest(), b.highest());
 			}
 		}
 		final long delta = System.currentTimeMillis() - startTime;
 		log("terrain created in " + delta + " millis; low=" + lowest + " high=" + highest);
 		assert lowest == highest : "flat terrain";
+	}
+	
+	protected void resetLowHigh() {
+		lowest = Short.MAX_VALUE;
+		highest = Short.MIN_VALUE;
+	}
+	
+	protected Block createBlock(int x, int y) {
+		return new Block(this, x, y, getFunc());
+	}
+	
+	protected void checkLowHigh(short l, short h) {
+		if (l < lowest) {
+			lowest = l;
+		}
+		if (h > highest) {
+			highest = h;
+		}
 	}
 	
 	public short lowest() {
@@ -67,7 +89,7 @@ public class Terrain {
 	
 	public void init() {
 		final long startTime = System.currentTimeMillis();
-		for (Block b : blocks.values()) {
+		for (Block b : getMap().values()) {
 			b.initVBO();
 		}
 		final long delta = System.currentTimeMillis() - startTime;
@@ -75,29 +97,21 @@ public class Terrain {
 	}
 	
 	public void draw() {
-		for (Block b : blocks.values()) {
+		for (Block b : getMap().values()) {
 			b.draw();
 		}
 	}
 	
 	public void destroy() {
-		for (Block b : blocks.values()) {
+		for (Block b : getMap().values()) {
 			b.destroy();
 		}
 	}
 	
 	public short getHeightAt(int x, int y) {
-		short blkDim = Block.getDim();
+		final Point2i c = Block.calcCenter(x, y);
 		// terrain coords to block center coords
-		final short d = (short) ((blkDim - 1) / 2);
-		final int fx = x + d + (x >= 0 ? 0 : 1);
-		final int fy = y + d + (y >= 0 ? 0 : 1);
-		final int blockX = blkDim * (fx / blkDim - (x<-d?1:0));
-		final int blockY = blkDim * (fy / blkDim - (y<-d?1:0));
-		assert Math.abs(x - blockX) <= d : "block center x cant be farther than 4";
-		assert Math.abs(y - blockY) <= d : "block center y cant be farther than 4";
-		final Point2i p = new Point2i(blockX, blockY);
-		final Block b = blocks.get(p);
+		final Block b = getMap().get(c);
 		short h = 0;
 		if (b != null) {
 			h = b.getHeightAt(x, y);

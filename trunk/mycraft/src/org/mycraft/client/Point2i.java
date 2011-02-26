@@ -12,6 +12,14 @@ public class Point2i implements Comparable<Point2i>, Comparator<Point2i> {
 		this.y = y;
 	}
 	
+	public int getX() {
+		return x;
+	}
+	
+	public int getY() {
+		return y;
+	}
+	
 	public int compareTo(Point2i p) {
 		final boolean lesserX = this.x < p.x;
 		final boolean greaterX = this.x > p.x;

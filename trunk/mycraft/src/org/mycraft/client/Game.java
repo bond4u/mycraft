@@ -20,13 +20,12 @@ import org.lwjgl.opengl.GLContext;
 import org.lwjgl.util.glu.GLU;
 
 public class Game extends Thread {
-
-	private static final int HEIGHT = 480;
-	private static final int WIDTH = HEIGHT * 3 / 2;
 	
 	private boolean running;
 	
 	private int fps;
+	
+	private Viewport viewport;
 	
 	private Canvas canvas;
 	
@@ -37,18 +36,6 @@ public class Game extends Thread {
 	private List<Shape> shapes;
 	
 	private Terrain land;
-	
-	private float fovy = 75f;
-	private float zNear = 0.5f;
-	private float zFar = 95.5f;
-
-	public int getWidth() {
-		return WIDTH;
-	}
-	
-	public int getHeight() {
-		return HEIGHT;
-	}
 	
 	public void setCanvas(Canvas c) {
 		canvas = c;
@@ -65,20 +52,23 @@ public class Game extends Thread {
 		DisplayMode current = Display.getDisplayMode();
 		System.out.println("Current: " + current);
 		fps = current.getFrequency();
+		viewport = new Viewport();
+		final int w = viewport.getWidth();
+		final int h = viewport.getHeight();
 		if (canvas != null) { // applet - browser window
 			try {
-				Display.setParent(canvas);
-//				logGlErrorIfAny();
+				Display.setParent(canvas); // canvas may be smaller/fixed?
+//				logGlErrorIfAny(); // not inited yet
 			} catch (LWJGLException e) {
 				log("LWJGL.setParent: " + e);
 			}
 		} else { // desktop window
-			DisplayMode dm = new DisplayMode(getWidth(), getHeight());
+			DisplayMode dm = new DisplayMode(w, h);
 			try {
 				Display.setDisplayMode(dm);
 //				logGlErrorIfAny(); // not inited yet?
-				int left = (current.getWidth() - getWidth()) / 2;
-				int top = (current.getHeight() - getHeight()) / 2;
+				int left = (current.getWidth() - w) / 2;
+				int top = (current.getHeight() - h) / 2;
 				Display.setLocation(left, top);
 //				logGlErrorIfAny(); // not inited yet?
 			} catch (LWJGLException e) {
@@ -101,10 +91,6 @@ public class Game extends Thread {
 	public void run() {
 		running = true;
 		initDisplay();
-		texLoader = new TextureLoader();
-		cam = new Camera();
-		land = new Terrain(new Random(5432543));
-		shapes = new ArrayList<Shape>();
 		initGL();
 		initWorld();
 		gameLoop();
@@ -192,12 +178,6 @@ public class Game extends Thread {
 		}
 	}
 	
-//	public void stop() {
-//	}
-//	
-//	public void destroy() {
-//	}
-	
 	public void log(String s) {
 		System.out.println(Thread.currentThread().getName() + ": " + s);
 	}
@@ -214,7 +194,6 @@ public class Game extends Thread {
 	}
 	
 	protected void initGL() {
-//		try {
 			// setup ogl
 //			GL11.glEnable(GL11.GL_LIGHT0);
 //			logGlErrorIfAny();
@@ -241,79 +220,10 @@ public class Game extends Thread {
 			GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
 			logGlErrorIfAny();
 			
-			warn("LWJGL: " + Sys.getVersion() + " / " + LWJGLUtil.getPlatformName());
-			logGlErrorIfAny();
-			warn("GL_VENDOR: " + GL11.glGetString(GL11.GL_VENDOR));
-			logGlErrorIfAny();
-			warn("GL_RENDERER: " + GL11.glGetString(GL11.GL_RENDERER));
-			logGlErrorIfAny();
-			warn("GL_VERSION: " + GL11.glGetString(GL11.GL_VERSION));
-			logGlErrorIfAny();
-//			warn("");
-//			warn("glLoadTransposeMatrixfARB() supported: " + GLContext.getCapabilities().GL_ARB_transpose_matrix);
-//			logGlErrorIfAny();
+			viewport.init();
 			
-			// canvas
-			GL11.glViewport(0, 0, getWidth(), getHeight());
-			logGlErrorIfAny();
-
-			// view mode?
-			GL11.glMatrixMode(GL11.GL_PROJECTION);
-			
-			final boolean canTranspose = GLContext.getCapabilities().GL_ARB_transpose_matrix;
-			logGlErrorIfAny();
-			if (canTranspose) {
-				// --- using extensions
-				final FloatBuffer identityTranspose = BufferUtils.createFloatBuffer(16).put(
-						new float[] {
-								1, 0, 0, 0,
-								0, 1, 0, 0,
-								0, 0, 1, 0,
-								0, 0, 0, 1,
-						}
-				);
-				identityTranspose.flip();
-				ARBTransposeMatrix.glLoadTransposeMatrixARB(identityTranspose);
-				logGlErrorIfAny();
-			} else {
-				// --- not using extensions
-				GL11.glLoadIdentity();
-				logGlErrorIfAny();
-			}
-			
-			// camera?
-			double rW = getWidth() / (double) getHeight();
-			log("window ratio " + rW);
-			GLU.gluPerspective(fovy, (float) rW, zNear, zFar);
-			logGlErrorIfAny();
-			GL11.glMatrixMode(GL11.GL_MODELVIEW);
-			logGlErrorIfAny();
-			GL11.glLoadIdentity();
-			logGlErrorIfAny();
-			double[] camRot = cam.getRotation();
-			GL11.glRotatef((float)camRot[0], 1f, 0f, 0f);
-			logGlErrorIfAny();
-			GL11.glRotatef((float)camRot[1], 0f, 1f, 0f);
-			logGlErrorIfAny();
-			GL11.glRotatef((float)camRot[2], 0f, 0f, 1f);
-			logGlErrorIfAny();
-			double[] camPos = cam.getPosition();
-			GL11.glTranslated(-camPos[0], -camPos[1], -camPos[2]);
-			logGlErrorIfAny();
-			log("cam @ " + camPos[0] + "," + camPos[1] + "," + camPos[2] +
-					" > " + camRot[0] + "," + camRot[1] + "," + camRot[2]);
-			
-//			FloatBuffer red = BufferUtils.createFloatBuffer(4).put(new float[] { 0.8f, 0.1f, 0.0f, 1.0f});
-//			FloatBuffer green = BufferUtils.createFloatBuffer(4).put(new float[] { 0.0f, 0.8f, 0.2f, 1.0f});
-//			FloatBuffer blue = BufferUtils.createFloatBuffer(4).put(new float[] { 0.2f, 0.2f, 1.0f, 1.0f});
-//			red.flip();
-//			green.flip();
-//			blue.flip();
-			
-//		} catch (Exception e) {
-//			warn("ex: " + e);
-//			running = false;
-//		}
+			cam = new Camera();
+			cam.update();
 	}
 	
 	private void destroyDisplay() {
@@ -322,6 +232,9 @@ public class Game extends Thread {
 	
 	private void initWorld() {
 		// Y is "up"
+		texLoader = new TextureLoader();
+		land = new Terrain(new Random(5432543));
+		shapes = new ArrayList<Shape>();
 		land.create();
 		land.init();
 		int baseY = 10;
@@ -346,22 +259,8 @@ public class Game extends Thread {
 	private void drawWorld() {
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | /*GL_STENCIL_BUFFER_BIT |*/ GL11.GL_DEPTH_BUFFER_BIT);
 		logGlErrorIfAny();
-//		log("cam @ " + camera_point[0] + "," + camera_point[1] + "," + camera_point[2] +
-//				" -> " + camera_rotation[0] + "," + camera_rotation[1] + "," + camera_rotation[2]);
-		// inverse camera coordinates - that way we get scene movement
-		// loading identity - that should be last identity - model view ?
-		GL11.glLoadIdentity();
-		logGlErrorIfAny();
-		double[] camRot = cam.getRotation();
-		GL11.glRotatef((float)camRot[0], 1f, 0f, 0f);
-		logGlErrorIfAny();
-		GL11.glRotatef((float)camRot[1], 0f, 1f, 0f);
-		logGlErrorIfAny();
-		GL11.glRotatef((float)camRot[2], 0f, 0f, 1f);
-		logGlErrorIfAny();
-		double[] camPos = cam.getPosition();
-		GL11.glTranslated(-camPos[0], -camPos[1], -camPos[2]);
-		logGlErrorIfAny();
+		
+		cam.update();
 		
 		GL11.glPushMatrix();
 		logGlErrorIfAny();
