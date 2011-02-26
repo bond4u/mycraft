@@ -56,7 +56,7 @@ public class MyApplet extends Applet {
 					game.start();
 				}
 				public void removeNotify() {
-					// canvas has been remvoed from window - stop paint thread
+					// canvas has been removed from window - stop paint thread
 					try {
 						game.join();
 					} catch (InterruptedException e) {
@@ -66,7 +66,8 @@ public class MyApplet extends Applet {
 				}
 			};
 			game.setCanvas(gameCanvas);
-			gameCanvas.setSize(game.getWidth(),game.getHeight());
+			log("canvas size: " + gameCanvas.getWidth() + "x" + gameCanvas.getHeight());
+//			gameCanvas.setSize(game.getWidth(),game.getHeight());
 			add(gameCanvas);
 			gameCanvas.setFocusable(true);
 			gameCanvas.requestFocus();

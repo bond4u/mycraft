@@ -1,23 +1,26 @@
 package org.mycraft.client;
 
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.util.glu.GLU;
+
 public class Camera {
 
 	// camera movement/coordinate sensitivity
-	private final double sx = 0.25;
-	private final double sy = 0.25;
-	private final double sz = 0.25;
+	private final float sx = 0.25f;
+	private final float sy = 0.25f;
+	private final float sz = 0.25f;
 	// camera turn/angle sensitivity
-	private final double sax = 0.25;
-	private final double say = 0.25;
-	private final double saz = 0.25;
+	private final float sax = 0.25f;
+	private final float say = 0.25f;
+	private final float saz = 0.25f;
 	// camera location
-	private double x = 0.0;
-	private double y = 6.0;
-	private double z = 12.0;
+	private float x = 0.0f;
+	private float y = 6.0f;
+	private float z = 12.0f;
 	// camera orientation
-	private double ax = 0.0;
-	private double ay = 0.0;
-	private double az = 0.0;
+	private float ax = 0.0f;
+	private float ay = 0.0f;
+	private float az = 0.0f;
 
 	/**
 	 * Returns current location.
@@ -73,7 +76,35 @@ public class Camera {
 //		log("moveUD " + d + ";" + dy + ";" + y);
 	}
 	
+	public void update() {
+		GL11.glLoadIdentity();
+		logGlErrorIfAny();
+		
+		GL11.glRotatef(ax, 1f, 0f, 0f);
+		logGlErrorIfAny();
+		GL11.glRotatef(ay, 0f, 1f, 0f);
+		logGlErrorIfAny();
+		GL11.glRotatef(az, 0f, 0f, 1f);
+		logGlErrorIfAny();
+		GL11.glTranslatef(-x, -y, -z);
+		logGlErrorIfAny();
+//		log("cam @ " + camPos[0] + "," + camPos[1] + "," + camPos[2] +
+//				" > " + camRot[0] + "," + camRot[1] + "," + camRot[2]);
+//		log("cam @ " + camera_point[0] + "," + camera_point[1] + "," + camera_point[2] +
+//		" -> " + camera_rotation[0] + "," + camera_rotation[1] + "," + camera_rotation[2]);
+// inverse camera coordinates - that way we get scene movement
+// loading identity - that should be last identity - model view ?
+	}
+	
 	private void log(String s) {
 		System.out.println(Thread.currentThread().getName() + ": " + s);
 	}
+	
+	public void logGlErrorIfAny() {
+		int e = GL11.glGetError();
+		if (e != 0) {
+			log("glGetError: " + e + ": " + GLU.gluErrorString(e));
+		}
+	}
+	
 }
