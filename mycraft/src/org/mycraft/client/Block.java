@@ -266,29 +266,59 @@ public class Block {
 	}
 	
 	public void draw() {
+//		long start = System.currentTimeMillis();
 	    GL11.glPushMatrix();
 	    logGlErrorIfAny();
+//	    long dura0 = System.currentTimeMillis() - start;
+//	    if (dura0 > 1000 / 60) {
+//	    	log("dura0 " + dura0 + " ms");
+//	    }
 	    
 //	    GL11.glScalef(0.5f, 0.5f, 0.5f);
 //	    logGlErrorIfAny();
+//	    long start1 = System.currentTimeMillis();
 	    GL11.glTranslatef(this.x - DIM / 2f, 0f, this.y - DIM / 2f);
 	    logGlErrorIfAny();
+//	    long dura1 = System.currentTimeMillis() - start1;
+//	    if (dura1 > 1000 / 60) {
+//	    	log("dura1 " + dura1 + " ms");
+//	    }
 	    
+//	    long start2 = System.currentTimeMillis();
 	    GL11.glEnableClientState(GL11.GL_COLOR_ARRAY);
 	    logGlErrorIfAny();
 	    GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
 	    logGlErrorIfAny();
+//	    long dura2 = System.currentTimeMillis() - start2;
+//	    if (dura2 > 1000 / 60) {
+//	    	log("dura2 " + dura2 + " ms");
+//	    }
 	    
+//	    long start3 = System.currentTimeMillis();
 	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, bufId);
 	    logGlErrorIfAny();
+//	    long dura3 = System.currentTimeMillis() - start3;
+//	    if (dura3 > 1000 / 60) {
+//	    	log("dura3 " + dura3 + " ms");
+//	    }
 	    
+//	    long start4 = System.currentTimeMillis();
 	    GL11.glColorPointer(BYTES_PER_COLOR, GL11.GL_UNSIGNED_BYTE, 0, vertexBytes);
 	    logGlErrorIfAny();
 	    GL11.glVertexPointer(ELEM_PER_VERTEX, GL11.GL_SHORT, 0, 0);
 	    logGlErrorIfAny();
+//	    long dura4 = System.currentTimeMillis() - start4;
+//	    if (dura4 > 1000 / 60) {
+//	    	log("dura4 " + dura4 + " ms");
+//	    }
 	    
+//	    long start5 = System.currentTimeMillis();
 	    GL11.glDrawArrays(GL11.GL_QUADS, 0, facesCount * VERTICES_PER_FACE);
 	    logGlErrorIfAny();
+//	    long dura5 = System.currentTimeMillis() - start5;
+//	    if (dura5 > 1000 / 60) {
+//	    	log("dura5 " + bufId + " " + facesCount + " faces in " + dura5 + " ms");
+//	    }
 	    
 	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, 0);
 	    logGlErrorIfAny();
@@ -300,6 +330,10 @@ public class Block {
 	    
 	    GL11.glPopMatrix();
 	    logGlErrorIfAny();
+//	    long dura = System.currentTimeMillis() - start;
+//	    if (dura > 1000 / 60) {
+//	    	log("block.draw " + x + "x" + y + " " + dura + " ms");
+//	    }
 	}
 	
 	public void destroy() {

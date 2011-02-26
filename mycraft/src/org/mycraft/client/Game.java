@@ -8,15 +8,11 @@ import java.util.Random;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
-import org.lwjgl.LWJGLUtil;
-import org.lwjgl.Sys;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
-import org.lwjgl.opengl.ARBTransposeMatrix;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GLContext;
 import org.lwjgl.util.glu.GLU;
 
 public class Game extends Thread {
@@ -29,7 +25,7 @@ public class Game extends Thread {
 	
 	private Canvas canvas;
 	
-	private TextureLoader texLoader;
+	private Textures texs;
 	
 	private Camera cam;
 	
@@ -56,6 +52,9 @@ public class Game extends Thread {
 		final int w = viewport.getWidth();
 		final int h = viewport.getHeight();
 		if (canvas != null) { // applet - browser window
+//			log("canvas size: " + canvas.getWidth() + "x" + canvas.getHeight());
+			canvas.setSize(w, h);
+			log("canvas size: " + canvas.getWidth() + "x" + canvas.getHeight());
 			try {
 				Display.setParent(canvas); // canvas may be smaller/fixed?
 //				logGlErrorIfAny(); // not inited yet
@@ -106,7 +105,8 @@ public class Game extends Thread {
 		while(running) {
 			// draw the gears
 			drawWorld();
-
+			// measure time
+//			long start = System.currentTimeMillis();
 			Display.update();
 			logGlErrorIfAny();
 			Display.sync(fps);
@@ -130,6 +130,10 @@ public class Game extends Thread {
 				log("display.closeRequested");
 				running = false;
 			}
+//			long duration = System.currentTimeMillis() - start;
+//			if (duration > 1000 / 60) {
+//				log("system " + duration + " ms");
+//			}
 		}
 		log("gameLoop ended");
 	}
@@ -232,31 +236,32 @@ public class Game extends Thread {
 	
 	private void initWorld() {
 		// Y is "up"
-		texLoader = new TextureLoader();
+		texs = new Textures();
 		land = new Terrain(new Random(5432543));
 		shapes = new ArrayList<Shape>();
 		land.create();
 		land.init();
 		int baseY = 10;
-		shapes.add(new Shape(texLoader, 0, baseY, 0));
-		shapes.add(new Shape(texLoader, 2, baseY, 0));
-		shapes.add(new Shape(texLoader, 0, baseY, 2));
-		shapes.add(new Shape(texLoader, -2, baseY, 0));
-		shapes.add(new Shape(texLoader, 0, baseY, -2));
-		shapes.add(new Shape(texLoader, 0, baseY+3, 0));
-		shapes.add(new Shape(texLoader, 0, baseY-3, 0));
+		shapes.add(new Shape(texs, 0, baseY, 0));
+		shapes.add(new Shape(texs, 2, baseY, 0));
+		shapes.add(new Shape(texs, 0, baseY, 2));
+		shapes.add(new Shape(texs, -2, baseY, 0));
+		shapes.add(new Shape(texs, 0, baseY, -2));
+		shapes.add(new Shape(texs, 0, baseY+3, 0));
+		shapes.add(new Shape(texs, 0, baseY-3, 0));
 		
-		shapes.add(new Shape(texLoader, 3, baseY+3, 3));
-		shapes.add(new Shape(texLoader, 3, baseY+3, -3));
-		shapes.add(new Shape(texLoader, 3, baseY-3, 3));
-		shapes.add(new Shape(texLoader, 3, baseY-3, -3));
-		shapes.add(new Shape(texLoader, -2, baseY-2, -2));
-		shapes.add(new Shape(texLoader, -2, baseY-2, 2));
-		shapes.add(new Shape(texLoader, -2, baseY+2, 2));
-		shapes.add(new Shape(texLoader, -2, baseY+2, -2));
+		shapes.add(new Shape(texs, 3, baseY+3, 3));
+		shapes.add(new Shape(texs, 3, baseY+3, -3));
+		shapes.add(new Shape(texs, 3, baseY-3, 3));
+		shapes.add(new Shape(texs, 3, baseY-3, -3));
+		shapes.add(new Shape(texs, -2, baseY-2, -2));
+		shapes.add(new Shape(texs, -2, baseY-2, 2));
+		shapes.add(new Shape(texs, -2, baseY+2, 2));
+		shapes.add(new Shape(texs, -2, baseY+2, -2));
 	}
 	
 	private void drawWorld() {
+//		long start = System.currentTimeMillis();
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | /*GL_STENCIL_BUFFER_BIT |*/ GL11.GL_DEPTH_BUFFER_BIT);
 		logGlErrorIfAny();
 		
@@ -270,12 +275,19 @@ public class Game extends Thread {
 		FloatBuffer white = BufferUtils.createFloatBuffer(4).put(new float[] { 1f, 1f, 1f, 1f, });
 		white.flip();
 		GL11.glMaterial(GL11.GL_FRONT_AND_BACK, GL11.GL_AMBIENT_AND_DIFFUSE, white);
+//		long start2 = System.currentTimeMillis();
 		for (Shape s : shapes) {
 			s.draw();
 		}
+//		long dura2 = System.currentTimeMillis() - start2;
+//		log("shapes.draw " + dura2 + " ms");
 		
 		GL11.glPopMatrix();
 		logGlErrorIfAny();
+//		long duration = System.currentTimeMillis() - start;
+//		if (duration > 1000 / 60) {
+//			log("drawWorld " + duration + "ms");
+//		}
 	}
 	
 	private void destroyWorld() {

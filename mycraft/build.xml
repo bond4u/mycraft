@@ -11,10 +11,14 @@
 	<property name="dir.res" value="res" />
 	<property name="jar.dest" value="${dir.build}/mycraft.jar" />
 	<property name="file.manifest" value="manifest.mf" />
+	<property name="dir.lib" value="lib" />
+	<property name="file.slick.util" value="slick-util.jar" />
+	<property name="lib.slick.util" value="${dir.lib}/${file.slick.util}" />
 	
 	<path id="cp">
 		<pathelement path="${lib.lwjgl}" />
 		<pathelement path="${lib.lwjgl-util}" />
+		<pathelement path="${lib.slick.util}" />
 	</path>
 	
 	<target name="clean">

@@ -77,6 +77,7 @@ public class Camera {
 	}
 	
 	public void update() {
+//		long start = System.currentTimeMillis();
 		GL11.glLoadIdentity();
 		logGlErrorIfAny();
 		
@@ -94,6 +95,10 @@ public class Camera {
 //		" -> " + camera_rotation[0] + "," + camera_rotation[1] + "," + camera_rotation[2]);
 // inverse camera coordinates - that way we get scene movement
 // loading identity - that should be last identity - model view ?
+//		long duration = System.currentTimeMillis() - start;
+//		if (duration > 1000 / 60) {
+//			log("cam update " + duration + " ms");
+//		}
 	}
 	
 	private void log(String s) {
