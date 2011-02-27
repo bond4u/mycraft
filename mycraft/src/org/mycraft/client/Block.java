@@ -58,8 +58,7 @@ public class Block {
 	}
 	
 	private short[][] gen() {
-		lowest = Short.MAX_VALUE;
-		highest = Short.MIN_VALUE;
+		resetLowHigh();
 		final short d = (DIM - 1) / 2;
 		final short[][] a = new short[DIM][DIM];
 		float[] fmm = new float[2];
@@ -76,17 +75,26 @@ public class Block {
 					fmm[1] = v;
 				}
 				short h = (short) v;
-				if (h < lowest) {
-					lowest = h;
-				} else if (h > highest) {
-					highest = h;
-				}
+				checkLowHigh(h);
 				a[x2][y2] = h;
 			}
 		}
 //		log("fmm=" + fmm[0] + "," + fmm[1] + "; smm=" + lowest + "," + highest);
 		assert lowest == highest : "flat block";
 		return a;
+	}
+	
+	protected void resetLowHigh() {
+		lowest = Short.MAX_VALUE;
+		highest = Short.MIN_VALUE;
+	}
+	
+	protected void checkLowHigh(short h) {
+		if (h < lowest) {
+			lowest = h;
+		} else if (h > highest) {
+			highest = h;
+		}
 	}
 	
 	public short lowest() {
@@ -206,12 +214,13 @@ public class Block {
 				}
 			}
 		}
-		final float len = (short) (t.highest() - t.lowest());
+		final short val = 16; // TEMP
+		final float len = (short) (val/*t.highest()*/ - -val/*t.lowest()*/);
 		assert len == 0f : "terrain has no height";
 		//final int step = 256 / DIM;
 		final float step = 255 / len;
 		//final int base = (1 + (len/*DIM*/ - 1) / 2) * step;
-		final float base = -t.lowest() * step;
+		final float base = val/*-t.lowest()*/ * step;
 		for (int x = 0; x < DIM; x++) {
 			for (int y = 0; y < DIM; y++) {
 				final short height = (short) data[x][y];

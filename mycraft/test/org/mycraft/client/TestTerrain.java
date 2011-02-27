@@ -7,8 +7,8 @@ import org.noise.TestGround;
 
 public class TestTerrain extends Terrain {
 	
-	public TestTerrain(Random r) {
-		super(r);
+	public TestTerrain(Random r, Viewport v, Camera c) {
+		super(r, v, c);
 	}
 	
 	// override ground
