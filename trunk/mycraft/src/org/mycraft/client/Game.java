@@ -27,7 +27,7 @@ public class Game extends Thread {
 	
 	private Textures texs;
 	
-	private Camera cam;
+	private Camera camera;
 	
 	private List<Shape> shapes;
 	
@@ -44,9 +44,9 @@ public class Game extends Thread {
 	public void initDisplay() {
 		// get current desktop
 		DisplayMode desktop = Display.getDesktopDisplayMode();
-		System.out.println("Desktop: " + desktop);
+		log("Desktop: " + desktop);
 		DisplayMode current = Display.getDisplayMode();
-		System.out.println("Current: " + current);
+		log("Current: " + current);
 		fps = current.getFrequency();
 		viewport = new Viewport();
 		final int w = viewport.getWidth();
@@ -142,10 +142,10 @@ public class Game extends Thread {
 		int mdx = Mouse.getDX(); // mouse x is 3d y
 		int mdy = Mouse.getDY(); // mouse y is 3d z
 		if (mdy != 0) {
-			cam.lookUpDown(mdy);
+			camera.lookUpDown(mdy);
 		}
 		if (mdx != 0) {
-			cam.lookLeftRight(mdx); // mouse goes right, but camera turns right
+			camera.lookLeftRight(mdx); // mouse goes right, but camera turns right
 		}
 	}
 	
@@ -162,17 +162,17 @@ public class Game extends Thread {
 		int forwardBackward = Keyboard.isKeyDown(Keyboard.KEY_W) ? 1 : (Keyboard.isKeyDown(Keyboard.KEY_S) ? -1 : 0);
 		logGlErrorIfAny();
 		if (forwardBackward != 0) {
-			cam.moveForwardBackward(forwardBackward);
+			camera.moveForwardBackward(forwardBackward);
 		}
 		int leftRight = Keyboard.isKeyDown(Keyboard.KEY_A) ? -1 : (Keyboard.isKeyDown(Keyboard.KEY_D) ? 1 : 0);
 		logGlErrorIfAny();
 		if (leftRight != 0) {
-			cam.moveLeftRight(leftRight);
+			camera.moveLeftRight(leftRight);
 		}
 		int upDown = Keyboard.isKeyDown(Keyboard.KEY_SPACE) ? 1 : (Keyboard.isKeyDown(Keyboard.KEY_C) ? -1 : 0);
 		logGlErrorIfAny();
 		if (upDown != 0) {
-			cam.moveUpDown(upDown);
+			camera.moveUpDown(upDown);
 		}
 		boolean esc = Keyboard.isKeyDown(Keyboard.KEY_ESCAPE);
 		logGlErrorIfAny();
@@ -226,8 +226,8 @@ public class Game extends Thread {
 			
 			viewport.init();
 			
-			cam = new Camera();
-			cam.update();
+			camera = new Camera();
+			camera.update();
 	}
 	
 	private void destroyDisplay() {
@@ -237,10 +237,10 @@ public class Game extends Thread {
 	private void initWorld() {
 		// Y is "up"
 		texs = new Textures();
-		land = new Terrain(new Random(5432543));
+		land = new Terrain(new Random(5432543), viewport, camera);
 		shapes = new ArrayList<Shape>();
 		land.create();
-		land.init();
+//		land.init();
 		int baseY = 10;
 		shapes.add(new Shape(texs, 0, baseY, 0));
 		shapes.add(new Shape(texs, 2, baseY, 0));
@@ -265,7 +265,7 @@ public class Game extends Thread {
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | /*GL_STENCIL_BUFFER_BIT |*/ GL11.GL_DEPTH_BUFFER_BIT);
 		logGlErrorIfAny();
 		
-		cam.update();
+		camera.update();
 		
 		GL11.glPushMatrix();
 		logGlErrorIfAny();

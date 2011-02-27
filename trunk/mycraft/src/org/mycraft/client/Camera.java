@@ -26,16 +26,16 @@ public class Camera {
 	 * Returns current location.
 	 * @return
 	 */
-	public double[] getPosition() {
-		return new double[] { x, y, z, };
+	public float[] getPosition() {
+		return new float[] { x, y, z, };
 	}
 	
 	/**
 	 * Returns current orientation angles - the direction we are looking at.
 	 * @return
 	 */
-	public double[] getRotation() {
-		return new double[] { ax, ay, az, };
+	public float[] getRotation() {
+		return new float[] { ax, ay, az, };
 	}
 	
 	public void lookUpDown(double a) {

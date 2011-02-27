@@ -10,9 +10,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mycraft.client.Block;
+import org.mycraft.client.Camera;
 import org.mycraft.client.Point2i;
 import org.mycraft.client.Terrain;
 import org.mycraft.client.TestTerrain;
+import org.mycraft.client.Viewport;
 
 public class BlockTest {
 
@@ -35,7 +37,9 @@ public class BlockTest {
 	@Test
 	public void testBlock() {
 		Random r = new Random(653654654);
-		Terrain t = new Terrain(r);
+		Viewport v = new Viewport();
+		Camera c = new Camera();
+		Terrain t = new Terrain(r, v, c);
 		IFunc2D f = new IFunc2D() {
 			@Override
 			public float get(float x, float y) {
@@ -117,7 +121,9 @@ public class BlockTest {
 	@Test
 	public void testBlockBorder() {
 		Random r = new Random(546543654);
-		TestTerrain t = new TestTerrain(r);
+		Viewport v = new Viewport();
+		Camera c = new Camera();
+		TestTerrain t = new TestTerrain(r, v, c);
 		t.create();
 		// check block values
 		short blkDim = Block.getDim();
