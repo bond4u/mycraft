@@ -1,7 +1,5 @@
 package org.mycraft.client;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Random;
@@ -24,13 +22,13 @@ public class Terrain {
 	private final IFunc2D func;
 	private final Comparator<Point2i> comp;
 	private final Map<Point2i, Block> blocks;
+	private final Thread thread; // terrain calc thread
+//	private final Map<Point2i, Block> add;
+//	private final Map<Point2i, Block> rem;
 	
 	private short lowest;
 	private short highest;
 	
-	private Thread thread; // terrain calc thread
-	
-//	private Camera cam;
 	
 	private boolean calcing;
 	
@@ -45,6 +43,8 @@ public class Terrain {
 			log("SharedDrawable ctor ex: " + e);
 		}
 		thread = createCalcer(sd, v, c);
+//		add = new TreeMap<Point2i, Block>(comp);
+//		rem = new TreeMap<Point2i, Block>(comp);
 	}
 	
 	protected IFunc2D createFunc(Random r) {
@@ -53,17 +53,17 @@ public class Terrain {
 	
 	protected Map<Point2i, Block> createBlocksMap(Comparator<Point2i> c) {
 		Map<Point2i, Block> m = new TreeMap<Point2i, Block>(c);
-		Map<Point2i, Block> sm = Collections.synchronizedMap(m);
-		return sm;
+//		Map<Point2i, Block> sm = Collections.synchronizedMap(m);
+		return m;
 	}
 	
 	protected IFunc2D getFunc() {
 		return func;
 	}
 	
-	protected Map<Point2i, Block> getMap() {
-		return blocks;
-	}
+//	protected Map<Point2i, Block> getMap() {
+//		return blocks;
+//	}
 	
 	public void create() {
 		resetLowHigh();
@@ -79,7 +79,7 @@ public class Terrain {
 		Point2i p = new Point2i(xc, yc);
 		Block b = createBlock(xc, yc);
 		b.initVBO(); // may need to re-calc once neighbours appear?
-		getMap().put(p, b);
+		blocks.put(p, b);
 		checkLowHigh(b.lowest(), b.highest());
 //			}
 //		}
@@ -157,12 +157,24 @@ public class Terrain {
 			log("drawable.makeCurrent ex: " + e);
 		}
 		boolean smallSleep = true;
+		int gc = 0;
 		// terrain calculation thread
 		while (calcing) {
 //			log("terrain calcer tick");
 			// wake up at least once every frame (assuming 60fps)
+			if (!smallSleep) {
+				gc++;
+				if (gc >= 30) {
+//					Runtime r = Runtime.getRuntime();
+//					long t = r.totalMemory();
+//					long f = r.freeMemory();
+//					log("gc: " + t + ", " + f + ", " + (t-f));
+					System.gc();
+					gc = 0;
+				}
+			}
 			try {
-				Thread.sleep(smallSleep ? 1 : 1000 / 60); // bigSleep is about 16ms
+				Thread.sleep(1000 / (smallSleep ? 60 : 30)); // smallSleep=1 frame
 				smallSleep = false;
 			} catch (InterruptedException e) {
 				log("terrain.calcer sleep interrupted: " + e);
@@ -244,7 +256,10 @@ public class Terrain {
 		// get block center
 		Point2i bp = Block.calcCenter(cpi[0], cpi[1]);
 		// get cam block
-		Block cb = getMap().get(bp);
+		Block cb;
+		synchronized (blocks) {
+			cb = blocks.get(bp);
+		}
 		if (cb == null) {
 //			log("gen cam block " + cpf[0] + "," + cpf[1] + "," + cpf[2] +
 //					" > " + cpi[0] + "," + cpi[1] +
@@ -260,8 +275,8 @@ public class Terrain {
 			short blkDim = Block.getDim();
 			short hDim = (short) (blkDim / 2);
 			// 0-angle means straight on
-			float far = v.getFar();
-			short depth = (short) Math.ceil(far + blkDim);
+			float far = v.getFar() + blkDim * 2;
+			short depth = (short) Math.ceil(far);
 //			log("depth=" + depth + " far=" + (depth / blkDim) + " ss=" + smallSleep);
 			for (int i = 1; i <= (depth / hDim) ; i++) {
 				float angle = 45f / i;
@@ -270,7 +285,10 @@ public class Terrain {
 					int dy = (int) (i * -hDim * Math.cos(cof[1] + a * angle));
 					int[] coi = new int[] { cpi[0] + dx, cpi[1] + dy, };
 					Point2i op = Block.calcCenter(coi[0], coi[1]);
-					Block ob = getMap().get(op);
+					Block ob;
+					synchronized (blocks) {
+						ob = blocks.get(op);
+					}
 					if (ob == null) {
 //						log("looking at " + cof[0] + "," + cof[1] + "," + cof[2] +
 //								" > " + dx + "x" + dy +
@@ -287,25 +305,28 @@ public class Terrain {
 	
 	protected void dropBlocks(Camera c, Viewport v) {
 		float[] camPos = c.getPosition();
-		float dim = v.getFar() * 1.5f;
-		Map<Point2i, Block> m = getMap();
-//		synchronized (m) {
-			for (Point2i p : m.keySet()) {
+		short blkDim = Block.getDim();
+		float dim = v.getFar() + blkDim * 4;
+		synchronized (blocks) {
+			for (Point2i p : blocks.keySet()) {
 				if (p.getX() < camPos[0] - dim || p.getX() > camPos[0] + dim ||
 						p.getY() < camPos[2] - dim || p.getY() > camPos[2] + dim) {
-					m.remove(p);
+					Block b = blocks.remove(p);
+					b.destroy();
 //					log("removed block @ " + p.getX() + "x" + p.getY());
 //					log("map size " + m.size() + " blocks.");
 					break; // one at a time
 				}
 			}
-//		}
+		}
 	}
 	
 	protected Block addBlock(Point2i p) {
 		Block b = createBlock(p.getX(), p.getY());
 		b.initVBO();
-		getMap().put(p, b);
+		synchronized (blocks) {
+			blocks.put(p, b);
+		}
 //		log("added block @ " + p.getX() + "x" + p.getY());
 		checkLowHigh(b.lowest(), b.highest());
 //		log("map size " + getMap().size() + " blocks.");
@@ -325,9 +346,8 @@ public class Terrain {
 	public void draw() {
 //		long start = System.currentTimeMillis();
 //		int cnt = 0;
-		Map<Point2i, Block> m = getMap();
-		synchronized (m) {
-			for (Block b : m.values()) {
+		synchronized (blocks) {
+			for (Block b : blocks.values()) {
 				b.draw();
 //				cnt++;
 			}
@@ -340,7 +360,7 @@ public class Terrain {
 	
 	public void destroy() {
 		stopCalcer();
-		for (Block b : getMap().values()) {
+		for (Block b : blocks.values()) {
 			b.destroy();
 		}
 	}
@@ -348,7 +368,10 @@ public class Terrain {
 	public short getHeightAt(int x, int y) {
 		final Point2i c = Block.calcCenter(x, y);
 		// terrain coords to block center coords
-		final Block b = getMap().get(c);
+		final Block b;
+		synchronized (blocks) {
+			b = blocks.get(c);
+		}
 		short h = 0;
 		if (b != null) {
 			h = b.getHeightAt(x, y);
