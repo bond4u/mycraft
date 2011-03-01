@@ -2,7 +2,9 @@ package org.mycraft.client;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 
+//import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.ARBBufferObject;
 import org.lwjgl.opengl.ARBVertexBufferObject;
 import org.lwjgl.opengl.GL11;
@@ -15,16 +17,17 @@ public class Shape {
 	
 	private static Texture txtr;
 	
-	private static final byte CUBE_DIM = 1;
-//	private static final int byteSize = Byte.SIZE / 8;
-	private static final int shortSize = Short.SIZE / 8;
-	private static final int floatSize = Float.SIZE / 8;
+	private static final float CUBE_DIM = 1f;
+	private static final int bitsPerByte = Byte.SIZE;
+//	private static final int byteSize = 1;
+//	private static final int shortSize = Short.SIZE / 8;
+	private static final int floatSize = Float.SIZE / bitsPerByte;
 	
 	private static final int FACES_COUNT = 6;
 	private static final int POINTS_PER_FACE = 4;
 	
 	private static final int VERTEX_SIZE = 3; // shorts
-	private static final int VERTEX_BYTES = VERTEX_SIZE * shortSize;
+	private static final int VERTEX_BYTES = VERTEX_SIZE * floatSize;
 	private static final int VERTICES_COUNT = FACES_COUNT * POINTS_PER_FACE;
 	private static final int VERTICES_BYTES = VERTICES_COUNT * VERTEX_BYTES;
 	
@@ -33,10 +36,10 @@ public class Shape {
 	private static final int TEXCOORDS_COUNT = FACES_COUNT * POINTS_PER_FACE;
 	private static final int TEXCOORDS_BYTES = TEXCOORDS_COUNT * TEXCOORD_BYTES;
 	
-	private static final int INDEX_SIZE = 2; // shorts
-	private static final int INDEX_BYTES = INDEX_SIZE * shortSize;
-	private static final int INDICES_COUNT = FACES_COUNT * POINTS_PER_FACE;
-	private static final int INDICES_BYTES = INDICES_COUNT * INDEX_BYTES;
+//	private static final int INDEX_SIZE = 2; // shorts
+//	private static final int INDEX_BYTES = INDEX_SIZE * shortSize;
+//	private static final int INDICES_COUNT = FACES_COUNT * POINTS_PER_FACE;
+//	private static final int INDICES_BYTES = INDICES_COUNT * INDEX_BYTES;
 	
 	private static int bufId = -1;
 	
@@ -72,16 +75,16 @@ public class Shape {
 	
 	protected void fillVBO(ByteBuffer b) {
 		b = b.order(ByteOrder.nativeOrder());
-		final short[][] vrt = vertices();
+		final float[][] vrt = vertices();
 		final short[][] idx = indices();
 		int cnt = 0;
 		for (int face = 0; face < FACES_COUNT; face++) {
 			short[] face_idxs = idx[face];
 			for (int pt = 0; pt < POINTS_PER_FACE; pt++) {
 				int vrt_idx = face_idxs[pt];
-				short[] v = vrt[vrt_idx];
-				for (short s : v) {
-					b.putShort(s);
+				float[] v = vrt[vrt_idx];
+				for (float s : v) {
+					b.putFloat(s);
 					cnt++;
 				}
 			}
@@ -103,16 +106,24 @@ public class Shape {
 		b.flip();
 	}
 	
-	protected short[][] vertices() {
-		final short[][] v = new short[][] {
-				{ -CUBE_DIM, -CUBE_DIM, CUBE_DIM, },
-				{ CUBE_DIM, -CUBE_DIM, CUBE_DIM, },
+	protected float[][] vertices() {
+		final float[][] v = new float[][] {
+//				{ -CUBE_DIM, -CUBE_DIM, CUBE_DIM, },
+//				{ CUBE_DIM, -CUBE_DIM, CUBE_DIM, },
+//				{ CUBE_DIM, CUBE_DIM, CUBE_DIM, },
+//				{ -CUBE_DIM, CUBE_DIM, CUBE_DIM, },
+//				{ CUBE_DIM, -CUBE_DIM, -CUBE_DIM, },
+//				{ -CUBE_DIM, -CUBE_DIM, -CUBE_DIM, },
+//				{ -CUBE_DIM, CUBE_DIM, -CUBE_DIM, },
+//				{ CUBE_DIM, CUBE_DIM, -CUBE_DIM, },
+				{ 0f, 0f, CUBE_DIM, },
+				{ CUBE_DIM, 0f, CUBE_DIM, },
 				{ CUBE_DIM, CUBE_DIM, CUBE_DIM, },
-				{ -CUBE_DIM, CUBE_DIM, CUBE_DIM, },
-				{ CUBE_DIM, -CUBE_DIM, -CUBE_DIM, },
-				{ -CUBE_DIM, -CUBE_DIM, -CUBE_DIM, },
-				{ -CUBE_DIM, CUBE_DIM, -CUBE_DIM, },
-				{ CUBE_DIM, CUBE_DIM, -CUBE_DIM, },
+				{ 0f, CUBE_DIM, CUBE_DIM, },
+				{ CUBE_DIM, 0f, 0f, },
+				{ 0f, 0f, 0f, },
+				{ 0f, CUBE_DIM, 0f, },
+				{ CUBE_DIM, CUBE_DIM, 0f, },
 		};
 		return v;
 	}
@@ -171,15 +182,34 @@ public class Shape {
 		return c;
 	}
 	
+	protected void logBuf(FloatBuffer fb, String s) {
+		String z = s;
+		while (fb.remaining() > 0) {
+			z += " ";
+			z += fb.get();
+		}
+		fb.rewind();
+		log(z);
+	}
+	
 	public void draw() {
+//		FloatBuffer mm = BufferUtils.createFloatBuffer(4*4);
+//		GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, mm);
+//		logGlErrorIfAny();
+//		logBuf(mm, "s0:");
+
 	    GL11.glPushMatrix();
 	    logGlErrorIfAny();
 	    
-	    GL11.glScalef(0.5f, 0.5f, 0.5f);
-	    logGlErrorIfAny();
+//	    GL11.glScalef(0.5f, 0.5f, 0.5f);
+//	    logGlErrorIfAny();
 	    GL11.glTranslatef(x, y, z);
 	    logGlErrorIfAny();
 	    
+//		GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, mm);
+//		logGlErrorIfAny();
+//		logBuf(mm, "s1:");
+
 	    GL11.glColor4f(1f, 1f, 1f, 1f);
 	    logGlErrorIfAny();
 	    txtr.bind();
@@ -194,7 +224,7 @@ public class Shape {
 	    
 	    GL11.glTexCoordPointer(TEXCOORD_SIZE, GL11.GL_FLOAT, 0, VERTICES_BYTES);
 	    logGlErrorIfAny();
-	    GL11.glVertexPointer(VERTEX_SIZE, GL11.GL_SHORT, 0, 0);
+	    GL11.glVertexPointer(VERTEX_SIZE, GL11.GL_FLOAT, 0, 0);
 	    logGlErrorIfAny();
 	    GL11.glDrawArrays(GL11.GL_QUADS, 0, VERTICES_COUNT);
 	    logGlErrorIfAny();

@@ -1,6 +1,7 @@
 package org.mycraft.client;
 
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLUtil;
@@ -18,7 +19,13 @@ public class Viewport {
 	private static final float fovy = 65f;
 	private static final float zNear = 0.1f;
 	private static final float zFar = 95.1f;
-
+	
+	private IntBuffer viewport;
+	
+	public Viewport() {
+		viewport = BufferUtils.createIntBuffer(4 * 4);
+	}
+	
 	public int getWidth() {
 		return WIDTH;
 	}
@@ -29,6 +36,10 @@ public class Viewport {
 	
 	public float getFovY() {
 		return fovy;
+	}
+	
+	public float getNear() {
+		return zNear;
 	}
 	
 	public float getFar() {
@@ -50,7 +61,11 @@ public class Viewport {
 		GL11.glViewport(0, 0, getWidth(), getHeight());
 		logGlErrorIfAny();
 		
+		GL11.glGetInteger(GL11.GL_VIEWPORT, viewport);
+		logGlErrorIfAny();
+		
 		GL11.glMatrixMode(GL11.GL_PROJECTION);
+		logGlErrorIfAny();
 		
 		final boolean canTranspose = GLContext.getCapabilities().GL_ARB_transpose_matrix;
 		logGlErrorIfAny();
@@ -80,6 +95,10 @@ public class Viewport {
 		
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
 		logGlErrorIfAny();
+	}
+	
+	public IntBuffer getMatrix() {
+		return viewport;
 	}
 	
 	private void log(String s) {

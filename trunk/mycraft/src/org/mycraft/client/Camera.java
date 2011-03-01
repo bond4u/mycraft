@@ -1,5 +1,8 @@
 package org.mycraft.client;
 
+import java.nio.FloatBuffer;
+
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
 
@@ -21,7 +24,13 @@ public class Camera {
 	private float ax = 0.0f;
 	private float ay = 0.0f;
 	private float az = 0.0f;
-
+	// camera matrix
+	private FloatBuffer matrix;
+	
+	public Camera() {
+		matrix = BufferUtils.createFloatBuffer(4 * 4);
+	}
+	
 	/**
 	 * Returns current location.
 	 * @return
@@ -40,11 +49,21 @@ public class Camera {
 	
 	public void lookUpDown(double a) {
 		ax -= a * sax;
+		if (ax >= 360f) {
+			ax -= 360f;
+		} else if (ax <= -360f) {
+			ax += 360f;
+		}
 //		log("lookUD " + a + "," + ax);
 	}
 	
 	public void lookLeftRight(double a) {
 		ay += a * say;
+		if (ay >= 360f) {
+			ay -= 360f;
+		} else if (ay <= -360f) {
+			ay += 360f;
+		}
 //		log("lookLR " + a + "," + ay);
 	}
 	
@@ -78,9 +97,6 @@ public class Camera {
 	
 	public void update() {
 //		long start = System.currentTimeMillis();
-		GL11.glLoadIdentity();
-		logGlErrorIfAny();
-		
 		GL11.glRotatef(ax, 1f, 0f, 0f);
 		logGlErrorIfAny();
 		GL11.glRotatef(ay, 0f, 1f, 0f);
@@ -99,6 +115,14 @@ public class Camera {
 //		if (duration > 1000 / 60) {
 //			log("cam update " + duration + " ms");
 //		}
+		// store matrix
+//		matrix.rewind();
+		GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, matrix);
+		logGlErrorIfAny();
+	}
+	
+	public FloatBuffer getMatrix() {
+		return matrix;
 	}
 	
 	private void log(String s) {
