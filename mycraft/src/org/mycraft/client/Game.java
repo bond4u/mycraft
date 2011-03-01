@@ -2,6 +2,7 @@ package org.mycraft.client;
 
 import java.awt.Canvas;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -22,15 +23,11 @@ public class Game extends Thread {
 	private int fps;
 	
 	private Viewport viewport;
-	
 	private Canvas canvas;
-	
 	private Textures texs;
-	
+	private Cursor cursor;
 	private Camera camera;
-	
 	private List<Shape> shapes;
-	
 	private Terrain land;
 	
 	public void setCanvas(Canvas c) {
@@ -226,7 +223,13 @@ public class Game extends Thread {
 			
 			viewport.init();
 			
+			cursor = new Cursor(/*viewport*/);
+			
 			camera = new Camera();
+			
+			GL11.glLoadIdentity();
+			logGlErrorIfAny();
+
 			camera.update();
 	}
 	
@@ -241,23 +244,33 @@ public class Game extends Thread {
 		shapes = new ArrayList<Shape>();
 		land.create();
 //		land.init();
-		int baseY = 10;
+		int baseY = 5;
 		shapes.add(new Shape(texs, 0, baseY, 0));
-		shapes.add(new Shape(texs, 2, baseY, 0));
-		shapes.add(new Shape(texs, 0, baseY, 2));
-		shapes.add(new Shape(texs, -2, baseY, 0));
-		shapes.add(new Shape(texs, 0, baseY, -2));
-		shapes.add(new Shape(texs, 0, baseY+3, 0));
-		shapes.add(new Shape(texs, 0, baseY-3, 0));
+		shapes.add(new Shape(texs, 1, baseY, 0));
+		shapes.add(new Shape(texs, 0, baseY, 1));
+		shapes.add(new Shape(texs, -1, baseY, 0));
+		shapes.add(new Shape(texs, 0, baseY, -1));
+		shapes.add(new Shape(texs, 0, baseY+2, 0));
+		shapes.add(new Shape(texs, 0, baseY-2, 0));
 		
-		shapes.add(new Shape(texs, 3, baseY+3, 3));
-		shapes.add(new Shape(texs, 3, baseY+3, -3));
-		shapes.add(new Shape(texs, 3, baseY-3, 3));
-		shapes.add(new Shape(texs, 3, baseY-3, -3));
-		shapes.add(new Shape(texs, -2, baseY-2, -2));
-		shapes.add(new Shape(texs, -2, baseY-2, 2));
-		shapes.add(new Shape(texs, -2, baseY+2, 2));
-		shapes.add(new Shape(texs, -2, baseY+2, -2));
+		shapes.add(new Shape(texs, 2, baseY+2, 2));
+		shapes.add(new Shape(texs, 2, baseY+2, -2));
+		shapes.add(new Shape(texs, 2, baseY-2, 2));
+		shapes.add(new Shape(texs, 2, baseY-2, -2));
+		shapes.add(new Shape(texs, -1, baseY-1, -1));
+		shapes.add(new Shape(texs, -1, baseY-1, 1));
+		shapes.add(new Shape(texs, -1, baseY+1, 1));
+		shapes.add(new Shape(texs, -1, baseY+1, -1));
+	}
+	
+	protected void logBuf(FloatBuffer fb, String s) {
+		String z = s;
+		while (fb.remaining() > 0) {
+			z += " ";
+			z += fb.get();
+		}
+		fb.rewind();
+		log(z);
 	}
 	
 	private void drawWorld() {
@@ -265,11 +278,20 @@ public class Game extends Thread {
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | /*GL_STENCIL_BUFFER_BIT |*/ GL11.GL_DEPTH_BUFFER_BIT);
 		logGlErrorIfAny();
 		
-		camera.update();
-		
-		GL11.glPushMatrix();
+		GL11.glLoadIdentity();
 		logGlErrorIfAny();
 		
+		GL11.glPushMatrix(); // +1=1
+		logGlErrorIfAny();
+		
+		camera.update();
+		
+//		// model matrix = 1 0 0 0; 0 1 0 0; 0 0 1 0; 0 0 0 1
+//		FloatBuffer mm = BufferUtils.createFloatBuffer(4*4);
+//		GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, mm);
+//		logGlErrorIfAny();
+////		logBuf(mm, "mm0:");
+
 		land.draw();
 		
 		FloatBuffer white = BufferUtils.createFloatBuffer(4).put(new float[] { 1f, 1f, 1f, 1f, });
@@ -282,8 +304,121 @@ public class Game extends Thread {
 //		long dura2 = System.currentTimeMillis() - start2;
 //		log("shapes.draw " + dura2 + " ms");
 		
-		GL11.glPopMatrix();
+//		float ds = GL11.glGetFloat(GL11.GL_DEPTH_SCALE); //= 1.0
+//		logGlErrorIfAny();
+//		float db = GL11.glGetFloat(GL11.GL_DEPTH_BIAS); //= 0.0
+//		logGlErrorIfAny();
+		
+//		if (ds != viewport.getFar()) {
+//			GL11.glPixelTransferf(GL11.GL_DEPTH_SCALE, viewport.getFar());
+//			logGlErrorIfAny();
+//		}
+//		if (db != viewport.getNear()) {
+//			GL11.glPixelTransferf(GL11.GL_DEPTH_BIAS, viewport.getNear());
+//			logGlErrorIfAny();
+//		}
+		
+		// viewport & proj matrix are constant
+		// we get pixel depth from window buffer & (un)project it to scene space
+//		// viewport = 0 0 720 480
+//		IntBuffer vp = BufferUtils.createIntBuffer(4*4);
+//		GL11.glGetInteger(GL11.GL_VIEWPORT, vp);
+//		logGlErrorIfAny();
+		int wx = viewport.getWidth() / 2;
+		int wy = viewport.getHeight() / 2;
+		FloatBuffer px = BufferUtils.createFloatBuffer(1);
+		GL11.glReadPixels(wx, wy, 1, 1, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, px);
 		logGlErrorIfAny();
+		if (px.get(0) <= 0.98f) {
+			// projection matrix = 1.0464569 0 0 0; 0 1.5696855 0 0;
+			// 0 0 -1.0021052 -1.0; 0 0 0.20021053 0
+			FloatBuffer pm = BufferUtils.createFloatBuffer(4*4);
+			GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, pm);
+			logGlErrorIfAny();
+			IntBuffer vp = viewport.getMatrix();
+			FloatBuffer mm = camera.getMatrix();
+			FloatBuffer op = BufferUtils.createFloatBuffer(4*4);
+			GLU.gluUnProject(wx, wy, px.get(0), mm, pm, vp, op);
+			logGlErrorIfAny();
+			float[] cr = camera.getRotation();
+			log("readpixel(depth)=" + px.get(0) + /*" b=" + db + " s=" + ds +*/
+				/*" z=" + (1f / px.get(0)) +*/ " o=" + op.get(0) + ", " +
+				op.get(1) + ", " + op.get(2) + "; " + /*Math.round(op.get(0)) + ", " +
+				Math.round(op.get(1)) + ", " + Math.round(op.get(2)) + "; " +
+				Math.ceil(op.get(0)) + ", " + Math.ceil(op.get(1)) + ", " +
+				Math.ceil(op.get(2)) + "; " + Math.floor(op.get(0)) + ", " +
+				Math.floor(op.get(1)) + ", " + Math.floor(op.get(2))*/
+				cr[0] + ", " + cr[1] + ", " + cr[2] 
+				);
+//			GL11.glPopMatrix(); // -1=0
+//			logGlErrorIfAny();
+			// fixing cell borders, depending from angle we decide which face it is
+			// .. and how to "fix" it
+			float x = op.get(0) /*- (float)Math.floor(px.get(0))*/;
+			float y = op.get(1) /*- (float)Math.floor(px.get(1))*/;
+			float z = op.get(2) /*- (float)Math.floor(px.get(2))*/;
+			if ((cr[1] > -360f && cr[1] < -180f) ||
+					(cr[1] > 0f && cr[1] < 180f)) {
+				x += 0.0062f;
+			} else if ((cr[1] > -180f && cr[1] < 0f) ||
+					(cr[1] > 180f && cr[1] < 360f)) {
+				x -= 0.0062f;
+			}
+			if ((cr[0] > -360 && cr[0] < -180f) ||
+					(cr[0] > 0f && cr[0] < 180f)) {
+				y -= 0.0062f;
+			} else if ((cr[0] > -180f && cr[0] < 0f) ||
+					(cr[0] > 180f && cr[0] < 360f)) {
+				y += 0.0062f;
+			}
+			if ((cr[1] < 90f && cr[1] > -90f) ||
+					(cr[1] > 270f) || (cr[1] < -270f)) {
+				z -= 0.0062f;
+			} else if ((cr[1] < 270f && cr[1] > 90f) ||
+					(cr[1] < -90f && cr[1] > -270f)) {
+				z += 0.0062f;
+			}
+			GL11.glTranslatef((float)Math.floor(x),
+					(float)Math.floor(y),
+					(float)Math.floor(z));
+			// black line, but it's too thin
+			GL11.glColor3f(0f, 0f, 0f);
+			logGlErrorIfAny();
+			// let's draw a wired cube
+			float d = 1f;
+			// one polyline ..
+			GL11.glBegin(GL11.GL_LINE_STRIP);
+			GL11.glVertex3f(0f, 0f, 0f); //1
+			GL11.glVertex3f( d, 0f, 0f); //2
+			GL11.glVertex3f( d,  d, 0f); //3
+			GL11.glVertex3f(0f,  d, 0f); //4
+			GL11.glVertex3f(0f, 0f, 0f);
+			GL11.glVertex3f(0f, 0f,  d); //1
+			GL11.glVertex3f( d, 0f,  d); //2
+			GL11.glVertex3f( d,  d,  d); //3
+			GL11.glVertex3f(0f,  d,  d); //4
+			GL11.glVertex3f(0f, 0f,  d);
+			GL11.glEnd();
+			logGlErrorIfAny();
+			// .. and filling the gaps
+			GL11.glBegin(GL11.GL_LINES);
+			GL11.glVertex3f( d, 0f, 0f); //2
+			GL11.glVertex3f( d, 0f,  d); //2
+			GL11.glVertex3f( d,  d, 0f); //3
+			GL11.glVertex3f( d,  d,  d); //3
+			GL11.glVertex3f(0f,  d, 0f); //4
+			GL11.glVertex3f(0f,  d,  d); //4
+			GL11.glEnd();
+			logGlErrorIfAny();
+//			GL11.glPushMatrix(); // +1=1
+//			logGlErrorIfAny();
+		}
+		
+		GL11.glPopMatrix(); // -1=0
+		logGlErrorIfAny();
+		
+		cursor.draw();
+		
 //		long duration = System.currentTimeMillis() - start;
 //		if (duration > 1000 / 60) {
 //			log("drawWorld " + duration + "ms");
