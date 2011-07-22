@@ -13,7 +13,7 @@ import org.lwjgl.util.glu.GLU;
 
 public class Viewport {
 	
-	private static final int HEIGHT = 480;
+	private static final int HEIGHT = 600; //480;
 	private static final int WIDTH = HEIGHT * 3 / 2;
 	
 	private static final float fovy = 65f;

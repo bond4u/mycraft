@@ -1,6 +1,7 @@
 package org.mycraft.client;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 //import java.util.Random;
 
 import org.lwjgl.opengl.ARBBufferObject;
@@ -13,30 +14,27 @@ public class Block {
 	
 	private static final int DIM = 15; // block dimensions
 	// = center + x rows & x columns & x layers
-	// vertex data
-	private static final int BYTES_PER_SHORT = 2; // 2 bytes per element
-	private static final int ELEM_PER_VERTEX = 3; // 3 elements per vertex
-	private static final int BYTES_PER_VERTEX = ELEM_PER_VERTEX * BYTES_PER_SHORT; // 3 * 2 = 6 bytes per vertex
-	private static final int VERTICES_PER_FACE = 4; // 4 vertices per face
-	private static final int VERTEX_BYTES_PER_FACE = VERTICES_PER_FACE * BYTES_PER_VERTEX; // 4 * 6 = 24 bytes per face
-//	private static final int FACES_COUNT = 1; // one face = top
-//	private static final int FACES_COUNT = DIM * DIM; // 5 * 5 = 25 faces per block
-//	private static final int VERTICES_COUNT = FACES_COUNT * VERTICES_PER_FACE;
-//	private static final int BYTES_PER_VERTICES = FACES_COUNT * BYTES_PER_FACE; // 25 * 24 bytes for block vertices
-	// color data per vertex
-	private static final int BYTES_PER_COLOR = 3;
-	private static final int COLOR_BYTES_PER_FACE = VERTICES_PER_FACE * BYTES_PER_COLOR;
-//	private static final int BYTES_PER_COLORS = FACES_COUNT * VERTICES_PER_FACE * BYTES_PER_COLOR;
+	// constants
+	private static final int BITS_PER_BYTE = Byte.SIZE; // 8
+	private static final int BYTES_PER_FLOAT = Float.SIZE / BITS_PER_BYTE; // 32/8=4
+	private static final int COMPONENTS_PER_POINT = 3; // 3d - 3 components - 3 axis
+	private static final int BYTES_PER_VERTEX = COMPONENTS_PER_POINT * BYTES_PER_FLOAT; // 3 * 4 = 12
+	private static final int POINTS_PER_FACE = 4;
+	private static final int VERTEXBYTES_PER_FACE = POINTS_PER_FACE * BYTES_PER_VERTEX; // 4 * 12 = 48
+	private static final int BYTES_PER_COLORCOMPONENT = 1;
+	private static final int COMPONENTS_PER_COLOR = 4; // r,g,b,a
+	private static final int BYTES_PER_COLOR = COMPONENTS_PER_COLOR * BYTES_PER_COLORCOMPONENT; // 3 * 1 = 3
+	private static final int COLORBYTES_PER_FACE = POINTS_PER_FACE * BYTES_PER_COLOR; // 4 * 3 = 12
 	
 	private final Terrain t;
 	private final int x;
 	private final int y;
 //	private final Random rnd;
 	private final IFunc2D func;
-	private final short data[][];
+	private final float data[][];
 	private final int bufId;
-	private short lowest;
-	private short highest;
+	private float lowest;
+	private float highest;
 	
 	private int facesCount;
 	private int vertexBytes;
@@ -46,6 +44,7 @@ public class Block {
 		this.t = t;
 		this.x = x;
 		this.y = y;
+//		log("Block.ctor(" + x + "," + y + ")");
 //		this.rnd = rnd;
 		this.func = f;
 		this.data = gen();
@@ -57,11 +56,11 @@ public class Block {
 		return DIM;
 	}
 	
-	private short[][] gen() {
+	private float[][] gen() {
 		resetLowHigh();
-		final short d = (DIM - 1) / 2;
-		final short[][] a = new short[DIM][DIM];
-		float[] fmm = new float[2];
+		final int d = (DIM - 1) / 2;
+//		log("gen range " + DIM + " vs delta " + d);
+		final float[][] a = new float[DIM][DIM];
 		for (int x2 = 0; x2 < DIM; x2++) {
 			for (int y2 = 0; y2 < DIM; y2++) {
 //				a[x2][y2] = (short) (rnd.nextInt(DIM) - d);
@@ -69,39 +68,33 @@ public class Block {
 				float y3 = y + (y2 - d);
 //				log("[" + x2 + "," + y2 + "] = [" + x3 + "," + y3 + "]");
 				float v = func.get(x3, y3);
-				if (v < fmm[0]) {
-					fmm[0] = v;
-				} else if (v > fmm[1]) {
-					fmm[1] = v;
-				}
-				short h = (short) v;
-				checkLowHigh(h);
-				a[x2][y2] = h;
+				checkLowHigh(v);
+				a[x2][y2] = v;
 			}
 		}
-//		log("fmm=" + fmm[0] + "," + fmm[1] + "; smm=" + lowest + "," + highest);
 		assert lowest == highest : "flat block";
 		return a;
 	}
 	
 	protected void resetLowHigh() {
-		lowest = Short.MAX_VALUE;
-		highest = Short.MIN_VALUE;
+		lowest = Byte.MAX_VALUE;
+		highest = Byte.MIN_VALUE;
 	}
 	
-	protected void checkLowHigh(short h) {
+	protected void checkLowHigh(float h) {
 		if (h < lowest) {
 			lowest = h;
-		} else if (h > highest) {
+		}
+		if (h > highest) {
 			highest = h;
 		}
 	}
 	
-	public short lowest() {
+	public float lowest() {
 		return lowest;
 	}
 	
-	public short highest() {
+	public float highest() {
 		return highest;
 	}
 	
@@ -114,9 +107,11 @@ public class Block {
 	public void initVBO() {
 		ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, this.bufId);
 		logGlErrorIfAny();
+//		log("gl buffer id " + this.bufId);
 		facesCount = countQuads(); //BYTES_PER_VERTICES + BYTES_PER_COLORS;
-		vertexBytes = facesCount * VERTEX_BYTES_PER_FACE;
-		colorBytes = facesCount * COLOR_BYTES_PER_FACE;
+//		log("faces count " + facesCount);
+		vertexBytes = facesCount * VERTEXBYTES_PER_FACE;
+		colorBytes = facesCount * COLORBYTES_PER_FACE;
 		final int size = vertexBytes + colorBytes;
 //		log("vertices=" + BYTES_PER_VERTICES + " bytes, colors=" + BYTES_PER_COLORS + " bytes = "
 //				+ "total=" + size + " bytes");
@@ -128,9 +123,14 @@ public class Block {
 		ByteBuffer buf = ARBVertexBufferObject.glMapBufferARB(
 				ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB,
 				ARBVertexBufferObject.GL_WRITE_ONLY_ARB, size, null);
+		buf = buf.order(ByteOrder.nativeOrder());
+//		log("buffer cap:" + buf.capacity() + " lim:" + buf.limit() +
+//				" pos:" + buf.position() + " rem:" + buf.remaining() + " dir:" + buf.isDirect() +
+//				" ro:" + buf.isReadOnly() + " ord:" + buf.order());
 		logGlErrorIfAny();
 		// fill buffer with data
 		fillVBO(buf);
+		buf.flip();
 		// unmap
 		ARBVertexBufferObject.glUnmapBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB);
 		logGlErrorIfAny();
@@ -146,14 +146,14 @@ public class Block {
 		for (int x = 0; x < DIM; x++) {
 			for (int y = 0; y < DIM; y++) {
 				cnt++;
-				final int height = data[x][y];
+				final float height = data[x][y];
 				// right edge
-				final int height2 = (x < DIM - 1) ? data[x+1][y] : queryHeightAt(x + 1, y);
+				final float height2 = (x < DIM - 1) ? data[x+1][y] : queryHeightAt(x + 1, y);
 				if (height != height2) {
 					cnt2++;
 				}
 				// top edge
-				final int height3 = (y < DIM - 1) ? data[x][y+1] : queryHeightAt(x, y + 1);
+				final float height3 = (y < DIM - 1) ? data[x][y+1] : queryHeightAt(x, y + 1);
 				if (height != height3) {
 					cnt3++;
 				}
@@ -166,109 +166,161 @@ public class Block {
 	private void fillVBO(ByteBuffer b) {
 		for (int x = 0; x < DIM; x++) {
 			for (int y = 0; y < DIM; y++) {
-				final short height = (short) data[x][y];
+				final float height = data[x][y];
 				// quad corners
-				b.putShort((short) (x + 1));
-				b.putShort(height);
-				b.putShort((short) y);
-				b.putShort((short) x);
-				b.putShort(height);
-				b.putShort((short) y);
-				b.putShort((short) x);
-				b.putShort(height);
-				b.putShort((short) (y + 1));
-				b.putShort((short) (x + 1));
-				b.putShort(height);
-				b.putShort((short) (y + 1));
+				b.putFloat((x + 1));
+				b.putFloat(height);
+				b.putFloat(y);
+				
+				b.putFloat(x);
+				b.putFloat(height);
+				b.putFloat(y);
+				
+				b.putFloat(x);
+				b.putFloat(height);
+				b.putFloat((y + 1));
+				
+				b.putFloat((x + 1));
+				b.putFloat(height);
+				b.putFloat((y + 1));
 				// right edge
-				final short height2 = (x < DIM - 1) ? data[x+1][y] : queryHeightAt(x + 1, y);
+				final float height2 = (x < DIM - 1) ? data[x+1][y] : queryHeightAt(x + 1, y);
 				if (height != height2) {
-					b.putShort((short) (x + 1));
-					b.putShort(height2);
-					b.putShort((short) y);
-					b.putShort((short) (x + 1));
-					b.putShort(height);
-					b.putShort((short) y);
-					b.putShort((short) (x + 1));
-					b.putShort(height);
-					b.putShort((short) (y + 1));
-					b.putShort((short) (x + 1));
-					b.putShort(height2);
-					b.putShort((short) (y + 1));
+					b.putFloat((x + 1));
+					b.putFloat(height2);
+					b.putFloat(y);
+					
+					b.putFloat((x + 1));
+					b.putFloat(height);
+					b.putFloat(y);
+					
+					b.putFloat((x + 1));
+					b.putFloat(height);
+					b.putFloat((y + 1));
+					
+					b.putFloat((x + 1));
+					b.putFloat(height2);
+					b.putFloat((y + 1));
 				}
 				// top edge
-				final short height3 = (y < DIM - 1) ? data[x][y+1] : queryHeightAt(x, y + 1);
+				final float height3 = (y < DIM - 1) ? data[x][y+1] : queryHeightAt(x, y + 1);
 				if (height != height3) {
-					b.putShort((short) (x + 1));
-					b.putShort(height);
-					b.putShort((short) (y + 1));
-					b.putShort((short) x);
-					b.putShort(height);
-					b.putShort((short) (y + 1));
-					b.putShort((short) x);
-					b.putShort(height3);
-					b.putShort((short) (y + 1));
-					b.putShort((short) (x + 1));
-					b.putShort(height3);
-					b.putShort((short) (y + 1));
+					b.putFloat((x + 1));
+					b.putFloat(height);
+					b.putFloat((y + 1));
+					
+					b.putFloat(x);
+					b.putFloat(height);
+					b.putFloat((y + 1));
+					
+					b.putFloat(x);
+					b.putFloat(height3);
+					b.putFloat((y + 1));
+					
+					b.putFloat((x + 1));
+					b.putFloat(height3);
+					b.putFloat((y + 1));
 				}
 			}
 		}
-		final short val = 16; // TEMP
-		final float len = (short) (val/*t.highest()*/ - -val/*t.lowest()*/);
-		assert len == 0f : "terrain has no height";
+		final byte val = 24; // TEMP
+		if (val <= 0) {
+			log("terrain has no height: " + val);
+		}
+		assert val <= 0 : "terrain has no height";
 		//final int step = 256 / DIM;
-		final float step = 255 / len;
+		final float step = 128 / (float) val; // 255/32=7.96875
 		//final int base = (1 + (len/*DIM*/ - 1) / 2) * step;
-		final float base = val/*-t.lowest()*/ * step;
+		final float base = step * 8; // 16*7.96875=127.5
+//		log("step " + step + " & base " + base);
+		final byte z = Byte.MIN_VALUE;
+		final byte a = Byte.MAX_VALUE;
 		for (int x = 0; x < DIM; x++) {
 			for (int y = 0; y < DIM; y++) {
-				final short height = (short) data[x][y];
+				final float height = data[x][y];
+				if (height < -val+1) {
+					log("block is lower than -16: " + height);
+				}
+				if (height > val-1) {
+					log("block is higher than 16: " + height);
+				}
 				assert height > t.highest() : "block has higher quad than terrain";
 				// rgb for each quad corner
-				b.put((byte) 0);
-				b.put((byte) (base + height * step));
-				b.put((byte) 0);
-				b.put((byte) 0);
-				b.put((byte) (base + height * step));
-				b.put((byte) 0);
-				b.put((byte) 0);
-				b.put((byte) (base + height * step));
-				b.put((byte) 0);
-				b.put((byte) 0);
-				b.put((byte) (base + height * step));
-				b.put((byte) 0);
+				byte c = (byte) (base + height * step);
+//				c &= 0xFF;
+//				log("h=" + height + " base=" + base + " step=" + step + " c=" + c);
+				b.put(z);
+				b.put(c);
+				b.put(z);
+				b.put(a);
+				
+				b.put(z);
+				b.put(c);
+				b.put(z);
+				b.put(a);
+				
+				b.put(z);
+				b.put(c);
+				b.put(z);
+				b.put(a);
+				
+				b.put(z);
+				b.put(c);
+				b.put(z);
+				b.put(a);
 				// right edge
-				final short height2 = (x < DIM - 1) ? data[x+1][y] : queryHeightAt(x + 1, y);
+				final float height2 = (x < DIM - 1) ? data[x+1][y] : queryHeightAt(x + 1, y);
 				if (height != height2) {
-					b.put((byte) 0);
-					b.put((byte) (base + height2 * step));
-					b.put((byte) 0);
-					b.put((byte) 0);
-					b.put((byte) (base + height * step));
-					b.put((byte) 0);
-					b.put((byte) 0);
-					b.put((byte) (base + height * step));
-					b.put((byte) 0);
-					b.put((byte) 0);
-					b.put((byte) (base + height2 * step));
-					b.put((byte) 0);
+//					short s2 = (short) (base + height2 * step);
+					byte c2 = (byte) (base + height2 * step);
+//					c2 &= 0xFF;
+//					log("s2=" + s2 + " c2=" + c2);
+					b.put(z);
+					b.put(c2);
+					b.put(z);
+					b.put(a);
+					
+					b.put(z);
+					b.put(c);
+					b.put(z);
+					b.put(a);
+					
+					b.put(z);
+					b.put(c);
+					b.put(z);
+					b.put(a);
+					
+					b.put(z);
+					b.put(c2);
+					b.put(z);
+					b.put(a);
 				}
 				// top edge
-				final short height3 = (y < DIM - 1) ? data[x][y+1] : queryHeightAt(x, y + 1);
+				final float height3 = (y < DIM - 1) ? data[x][y+1] : queryHeightAt(x, y + 1);
 				if (height != height3) {
-					b.put((byte) 0);
-					b.put((byte) (base + height * step));
-					b.put((byte) 0);
-					b.put((byte) 0);
-					b.put((byte) (base + height * step));
-					b.put((byte) 0);
-					b.put((byte) 0);
-					b.put((byte) (base + height3 * step));
-					b.put((byte) 0);
-					b.put((byte) 0);
-					b.put((byte) (base + height3 * step));
-					b.put((byte) 0);
+//					short s3 = (short) (base + height3 * step);
+					byte c3 = (byte) (base + height3 * step);
+//					c3 &= 0xFF;
+//					log("s3=" + s3 + " c3=" + c3);
+					b.put(z);
+					b.put(c);
+					b.put(z);
+					b.put(a);
+					
+					b.put(z);
+					b.put(c);
+					b.put(z);
+					b.put(a);
+					
+					b.put(z);
+					b.put(c3);
+					b.put(z);
+					b.put(a);
+					
+					b.put(z);
+					b.put(c3);
+					b.put(z);
+					b.put(a);
 				}
 			}
 		}
@@ -294,9 +346,9 @@ public class Block {
 //	    }
 	    
 //	    long start2 = System.currentTimeMillis();
-	    GL11.glEnableClientState(GL11.GL_COLOR_ARRAY);
-	    logGlErrorIfAny();
 	    GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+	    logGlErrorIfAny();
+	    GL11.glEnableClientState(GL11.GL_COLOR_ARRAY);
 	    logGlErrorIfAny();
 //	    long dura2 = System.currentTimeMillis() - start2;
 //	    if (dura2 > 1000 / 60) {
@@ -311,10 +363,17 @@ public class Block {
 //	    	log("dura3 " + dura3 + " ms");
 //	    }
 	    
+	    // FIXME i'm not sure what was the problem
+	    // 1) ati
+	    // 2) laptop
+	    // 3) rgb color (instead of rgba)
+	    // 4) vertices as shorts (floats are best i guess)
+	    // .. but it's working now
+	    
 //	    long start4 = System.currentTimeMillis();
-	    GL11.glColorPointer(BYTES_PER_COLOR, GL11.GL_UNSIGNED_BYTE, 0, vertexBytes);
+	    GL11.glVertexPointer(COMPONENTS_PER_POINT, GL11.GL_FLOAT, 0, 0);
 	    logGlErrorIfAny();
-	    GL11.glVertexPointer(ELEM_PER_VERTEX, GL11.GL_SHORT, 0, 0);
+	    GL11.glColorPointer(BYTES_PER_COLOR, GL11.GL_BYTE, 0, vertexBytes);
 	    logGlErrorIfAny();
 //	    long dura4 = System.currentTimeMillis() - start4;
 //	    if (dura4 > 1000 / 60) {
@@ -322,7 +381,7 @@ public class Block {
 //	    }
 	    
 //	    long start5 = System.currentTimeMillis();
-	    GL11.glDrawArrays(GL11.GL_QUADS, 0, facesCount * VERTICES_PER_FACE);
+	    GL11.glDrawArrays(GL11.GL_QUADS, 0, facesCount * POINTS_PER_FACE);
 	    logGlErrorIfAny();
 //	    long dura5 = System.currentTimeMillis() - start5;
 //	    if (dura5 > 1000 / 60) {
@@ -332,9 +391,9 @@ public class Block {
 	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, 0);
 	    logGlErrorIfAny();
 	    
-	    GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
-	    logGlErrorIfAny();
 	    GL11.glDisableClientState(GL11.GL_COLOR_ARRAY);
+	    logGlErrorIfAny();
+	    GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
 	    logGlErrorIfAny();
 	    
 	    GL11.glPopMatrix();
@@ -350,11 +409,11 @@ public class Block {
 	    logGlErrorIfAny();
 	}
 	
-	private short queryHeightAt(int x, int y) {
-		final short d = (DIM - 1) / 2;
+	private float queryHeightAt(int x, int y) {
+		final int d = (DIM - 1) / 2;
 		final int landX = this.x - d + x; // 9 -> 5
 		final int landY = this.y - d + y; // 0 -> -4
-		short h = t.getHeightAt(landX, landY);
+		float h = t.getHeightAt(landX, landY);
 		return h;
 	}
 	
@@ -370,15 +429,15 @@ public class Block {
 		return new Point2i(x3 * DIM, y3 * DIM); // 8+7=15/15=1
 	}
 	
-	public short getHeightAt(int x, int y) {
-		final short d = (DIM - 1) / 2;
+	public float getHeightAt(int x, int y) {
+		final int d = (DIM - 1) / 2;
 		final int dx = x + d - this.x;
 		final int dy = y + d - this.y;
 		assert Math.abs(this.x - x) <= d : "x must not differ more than 4";
 		assert Math.abs(this.y - y) <= d : "y must not differ more than 4";
 		assert dx >= 0 && dx < DIM : "x idx out of array";
 		assert dy >= 0 && dy < DIM : "y idx out of array";
-		final short h = data[dx][dy];
+		final float h = data[dx][dy];
 		return h;
 	}
 	

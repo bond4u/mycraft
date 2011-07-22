@@ -26,8 +26,8 @@ public class Terrain {
 //	private final Map<Point2i, Block> add;
 //	private final Map<Point2i, Block> rem;
 	
-	private short lowest;
-	private short highest;
+	private float lowest;
+	private float highest;
 	
 	
 	private boolean calcing;
@@ -98,7 +98,7 @@ public class Terrain {
 		return new Block(this, x, y, getFunc());
 	}
 	
-	protected void checkLowHigh(short l, short h) {
+	protected void checkLowHigh(float l, float h) {
 		if (l < lowest) {
 			lowest = l;
 		}
@@ -107,11 +107,11 @@ public class Terrain {
 		}
 	}
 	
-	public short lowest() {
+	public float lowest() {
 		return lowest;
 	}
 	
-	public short highest() {
+	public float highest() {
 		return highest;
 	}
 	
@@ -329,7 +329,10 @@ public class Terrain {
 		}
 //		log("added block @ " + p.getX() + "x" + p.getY());
 		checkLowHigh(b.lowest(), b.highest());
-//		log("map size " + getMap().size() + " blocks.");
+//		log("terrain lowest " + lowest + " & highest " + highest);
+//		synchronized (blocks) {
+//			log("map size " + blocks.size() + " blocks.");
+//		}
 		return b;
 	}
 	
@@ -365,14 +368,14 @@ public class Terrain {
 		}
 	}
 	
-	public short getHeightAt(int x, int y) {
+	public float getHeightAt(int x, int y) {
 		final Point2i c = Block.calcCenter(x, y);
 		// terrain coords to block center coords
 		final Block b;
 		synchronized (blocks) {
 			b = blocks.get(c);
 		}
-		short h = 0;
+		float h = 0;
 		if (b != null) {
 			h = b.getHeightAt(x, y);
 		}

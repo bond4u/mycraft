@@ -63,8 +63,11 @@ public class Shape {
 		    logGlErrorIfAny();
 			ByteBuffer buf = ARBVertexBufferObject.glMapBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB,
 					ARBVertexBufferObject.GL_WRITE_ONLY_ARB, size, null);
+			buf = buf.order(ByteOrder.nativeOrder());
+//			log("buf o:" + buf.order());
 		    logGlErrorIfAny();
 			fillVBO(buf);
+			buf.flip();
 		    logGlErrorIfAny();
 			ARBVertexBufferObject.glUnmapBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB);
 		    logGlErrorIfAny();
@@ -103,7 +106,6 @@ public class Shape {
 			}
 		}
 //		log("texCoords=" + cnt + " floats");
-		b.flip();
 	}
 	
 	protected float[][] vertices() {

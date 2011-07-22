@@ -341,15 +341,15 @@ public class Game extends Thread {
 			GLU.gluUnProject(wx, wy, px.get(0), mm, pm, vp, op);
 			logGlErrorIfAny();
 			float[] cr = camera.getRotation();
-			log("readpixel(depth)=" + px.get(0) + /*" b=" + db + " s=" + ds +*/
-				/*" z=" + (1f / px.get(0)) +*/ " o=" + op.get(0) + ", " +
-				op.get(1) + ", " + op.get(2) + "; " + /*Math.round(op.get(0)) + ", " +
-				Math.round(op.get(1)) + ", " + Math.round(op.get(2)) + "; " +
-				Math.ceil(op.get(0)) + ", " + Math.ceil(op.get(1)) + ", " +
-				Math.ceil(op.get(2)) + "; " + Math.floor(op.get(0)) + ", " +
-				Math.floor(op.get(1)) + ", " + Math.floor(op.get(2))*/
-				cr[0] + ", " + cr[1] + ", " + cr[2] 
-				);
+//			log("readpixel(depth)=" + px.get(0) + /*" b=" + db + " s=" + ds +*/
+//				/*" z=" + (1f / px.get(0)) +*/ " o=" + op.get(0) + ", " +
+//				op.get(1) + ", " + op.get(2) + "; " + /*Math.round(op.get(0)) + ", " +
+//				Math.round(op.get(1)) + ", " + Math.round(op.get(2)) + "; " +
+//				Math.ceil(op.get(0)) + ", " + Math.ceil(op.get(1)) + ", " +
+//				Math.ceil(op.get(2)) + "; " + Math.floor(op.get(0)) + ", " +
+//				Math.floor(op.get(1)) + ", " + Math.floor(op.get(2))*/
+//				cr[0] + ", " + cr[1] + ", " + cr[2] 
+//				);
 //			GL11.glPopMatrix(); // -1=0
 //			logGlErrorIfAny();
 			// fixing cell borders, depending from angle we decide which face it is
