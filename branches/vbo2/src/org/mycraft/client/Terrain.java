@@ -1,91 +1,87 @@
 package org.mycraft.client;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 
-import org.lwjgl.LWJGLException;
-import org.lwjgl.opengl.Display;
-import org.lwjgl.opengl.Drawable;
+import org.lwjgl.Sys;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GLContext;
-import org.lwjgl.opengl.SharedDrawable;
 import org.lwjgl.util.glu.GLU;
 import org.noise.Ground;
 import org.noise.IFunc2D;
 
 public class Terrain {
 	
-//	private static final int DIM = 16;
-
 	private final IFunc2D func;
-	private final Comparator<Point2i> comp;
-	private final Map<Point2i, Block> blocks;
+	private final Comparator<Point3f> comp;
+	private final Map<Point3f, Block> addBlocks; // newly created blocks
+ 	private final Map<Point3f, Block> renderBlocks; // currently being rendered 
+	private final Map<Point3f, Block> cacheBlocks; // removed from rendering, may be re-used
+	private final List<Block> removeBlocks;
 	private final Thread thread; // terrain calc thread
-//	private final Map<Point2i, Block> add;
-//	private final Map<Point2i, Block> rem;
 	
 	private float lowest;
 	private float highest;
 	
-	
 	private boolean calcing;
 	
 	public Terrain(Random r, Viewport v, Camera c) {
-		func = createFunc(r); //new Ground(r);
-		comp = new Point2i(0, 0);
-		blocks = createBlocksMap(comp);
-		SharedDrawable sd = null;
-		try {
-			sd = new SharedDrawable(Display.getDrawable());
-		} catch (LWJGLException e) {
-			log("SharedDrawable ctor ex: " + e);
-		}
-		thread = createCalcer(sd, v, c);
-//		add = new TreeMap<Point2i, Block>(comp);
-//		rem = new TreeMap<Point2i, Block>(comp);
+		func = createFunc(r);
+		comp = new Point3f(0f, 0f, 0f);
+		addBlocks = createAddBlocksMap(comp);
+		renderBlocks = createRenderBlocksMap(comp);
+		cacheBlocks = createCacheBlocksMap(comp);
+		removeBlocks = createRemoveBlocksList();
+		thread = createCalcer(v, c);
 	}
 	
 	protected IFunc2D createFunc(Random r) {
 		return new Ground(r);
 	}
 	
-	protected Map<Point2i, Block> createBlocksMap(Comparator<Point2i> c) {
-		Map<Point2i, Block> m = new TreeMap<Point2i, Block>(c);
+	protected Map<Point3f, Block> createAddBlocksMap(Comparator<Point3f> c) {
+		Map<Point3f, Block> m = new TreeMap<Point3f, Block>();
+		return m;
+	}
+	
+	protected Map<Point3f, Block> createRenderBlocksMap(Comparator<Point3f> c) {
+		Map<Point3f, Block> m = new TreeMap<Point3f, Block>(c);
 //		Map<Point2i, Block> sm = Collections.synchronizedMap(m);
 		return m;
+	}
+	
+	protected Map<Point3f, Block> createCacheBlocksMap(Comparator<Point3f> c) {
+		Map<Point3f, Block> m = new TreeMap<Point3f, Block>(c);
+		return m;
+	}
+	
+	protected List<Block> createRemoveBlocksList() {
+		List<Block> l = new ArrayList<Block>();
+		return l;
 	}
 	
 	protected IFunc2D getFunc() {
 		return func;
 	}
 	
-//	protected Map<Point2i, Block> getMap() {
-//		return blocks;
-//	}
-	
 	public void create() {
 		resetLowHigh();
-//		short blkDim = Block.getDim();
-//		final long startTime = System.currentTimeMillis();
-//		for (int x = -DIM / 2; x <= DIM / 2; x++) {
-//			for (int y = -DIM / 2; y <= DIM / 2; y++) {
-//				final int xc = x * blkDim;
-//				final int yc = y * blkDim;
-		final int xc = 0;
-		final int yc = 0;
-//				log("p=" + xx + "x" + yy);
-		Point2i p = new Point2i(xc, yc);
-		Block b = createBlock(xc, yc);
-		b.initVBO(); // may need to re-calc once neighbours appear?
-		blocks.put(p, b);
+		// just screate one block at (0,0)
+		final float startX = 0f;
+		final float startY = 0f;
+		final float startZ = 0f;
+		Point3f p = new Point3f(startX, startY, startZ);
+		Block b = createBlock(startX, startY, startZ);
+		b.generate();
+		b.initVBO();
+		renderBlocks.put(p, b);
+//		addBlocks.add(b);
 		checkLowHigh(b.lowest(), b.highest());
-//			}
-//		}
-//		final long delta = System.currentTimeMillis() - startTime;
-//		log("terrain created in " + delta + " ms; low=" + lowest + " high=" + highest);
-//		assert lowest == highest : "flat terrain";
+		assert lowest == highest : "flat terrain";
 		startCalcer();
 	}
 	
@@ -94,8 +90,8 @@ public class Terrain {
 		highest = Short.MIN_VALUE;
 	}
 	
-	protected Block createBlock(int x, int y) {
-		return new Block(this, x, y, getFunc());
+	protected Block createBlock(float x, float y, float z) {
+		return new Block(this, x, y, z/*, getFunc()*/);
 	}
 	
 	protected void checkLowHigh(float l, float h) {
@@ -115,25 +111,11 @@ public class Terrain {
 		return highest;
 	}
 	
-//	public void init() {
-//		final long startTime = System.currentTimeMillis();
-//		for (Block b : getMap().values()) {
-//			b.initVBO();
-//		}
-//		final long delta = System.currentTimeMillis() - startTime;
-//		log("terrain filled in " + delta + " millis");
-//	}
-	
-	protected Thread createCalcer(final Drawable d, final Viewport v, final Camera c) {
-//		cam = c;
+	protected Thread createCalcer(final Viewport v, final Camera c) {
 		log("creating terrain calcer");
 		Thread t = new Thread() {
 			public void run() {
-//				try {
-				calc(d, v, c);
-//				} catch (Throwable t) {
-//					log("terrain calc thread ex: " + t);
-//				}
+				calc(v, c);
 			}
 		};
 		return t;
@@ -145,175 +127,203 @@ public class Terrain {
 		thread.start();
 	}
 	
-	protected void calc(Drawable d, Viewport v, Camera c) {
+	protected void calc(Viewport v, Camera c) {
 		log("terrain calc starting..");
-		try {
-			log("Drawable.iscurrent=" + d.isCurrent());
-			if (!d.isCurrent()) {
-				d.makeCurrent();
-			}
-			GLContext.useContext(d);
-		} catch (LWJGLException e) {
-			log("drawable.makeCurrent ex: " + e);
-		}
-		boolean smallSleep = true;
-		int gc = 0;
+		int rval = 0;
 		// terrain calculation thread
 		while (calcing) {
-//			log("terrain calcer tick");
-			// wake up at least once every frame (assuming 60fps)
-			if (!smallSleep) {
-				gc++;
-				if (gc >= 30) {
-//					Runtime r = Runtime.getRuntime();
-//					long t = r.totalMemory();
-//					long f = r.freeMemory();
-//					log("gc: " + t + ", " + f + ", " + (t-f));
-					System.gc();
-					gc = 0;
-				}
-			}
+			rval = genBlocks(c, v);
+			dropBlocks(c, v);
+			// wake up at least once a second (assuming 60fps)
 			try {
-				Thread.sleep(1000 / (smallSleep ? 60 : 30)); // smallSleep=1 frame
-				smallSleep = false;
+				long sleep = 1000 / (rval == 0 ? 60 : 30);
+				Thread.sleep(sleep); // 1=smallsleep
+				rval = 0;
 			} catch (InterruptedException e) {
 				log("terrain.calcer sleep interrupted: " + e);
 			}
-			// too much recursion - stack overflow
-//			float[] camPos = c.getPosition();
-//			float[] camDir = c.getRotation();
-//			smallSleep = createBlock(c, v, camPos, false);
-//			if (!smallSleep) {
-//				// create nearest block recursively
-//				smallSleep = createBlock(c, v, camPos, true);
-//			}
-			smallSleep = genBlocks(c, v);
-			dropBlocks(c, v);
 		}
 		log("terrain calc finished.");
 	}
 	
-//	protected boolean createBlock(Camera c, Viewport v, float[] p, boolean r) {
-//		Point2i pt = calcPoint(p[0], p[2]);
-//		Block bl;
-//		boolean b = false;
-//		if (!r) {
-//			bl = getMap().get(pt);
-//			b = (bl == null);
-//			if (b) {
-//				bl = addBlock(pt);
-//			}
-//		}
-//		if (r) {
-//			short blkDim = Block.getDim();
-//			b = false;
-//			float a = 0f;
-//			int s = 1;
-//			float[] camDir = c.getRotation();
-//			for (int i = 0; b == false && i < 8; i++) {
-//				a += 45f * s * i;
-//				float dz = (float) (-blkDim * Math.cos(camDir[1] + a)); // go forward/backward
-//				float dx = (float) (-blkDim * Math.sin(camDir[1] + a)); // go sideways
-//				b = createBlock(c, v,
-//						new float[] { pt.getX() + dx, 0f, pt.getY() + dz, },
-//						false);
-//				s *= -1;
-//			}
-//			float dim = v.getFar() + blkDim;
-//			float x0 = p[0] - dim;
-//			float x1 = p[0] + dim;
-//			float z0 = p[2] - dim;
-//			float z1 = p[2] + dim;
-//			float[] cp = c.getPosition();
-//			// if within view distance, then recurse
-//			if (x0 < cp[0] && cp[0] < x1 && z0 < cp[2] && cp[2] < z1) {
-//				a = 0f;
-//				s = 1;
-//				for (int i = 0; b == false && i < 8; i++) {
-//					a += 45f * s * i;
-//					float dy = (float) (-blkDim * Math.cos(camDir[1] + a)); // go forward/backward
-//					float dx = (float) (-blkDim * Math.sin(camDir[1] + a)); // go sideways
-//					b = createBlock(c, v,
-//							new float[] { pt.getX() + dy, 0f, pt.getY() + dx, },
-//							true);
-//					s *= -1;
-//				}
-//			}
-//		}
-//		return b;
-//	}
+	private Point3f lastPoint = null;
+	float[] delta = new float[] { 0f, 0f, 0f, };
+	float radius = Block.getDim();
+	int stage = 0;
 	
-//	protected Point2i calcPoint(float x, float y) {
-//		Point2i p = Block.calcCenter((int)x, (int)y);
-//		return p;
-//	}
-	
-	protected boolean genBlocks(Camera c, Viewport v) {
+	protected int genBlocks(Camera c, Viewport v) {
 		// track camera ?
-		float[] cpf = c.getPosition(); // x=l/r, y=u/d, z=f/b
-		// cam coords floats to ints - ignore height/Y for now
-		int[] cpi = new int[] { (int)cpf[0], (int)cpf[2], };
-		// get block center
-		Point2i bp = Block.calcCenter(cpi[0], cpi[1]);
+		float[] fCamPos = c.getPosition(); // x=l/r, y=u/d, z=f/b
+		fCamPos[1] = 0f; // Y is up
+		Point3f cpt = Block.calcBlockPoint(fCamPos[0], fCamPos[1], fCamPos[2]);
 		// get cam block
-		Block cb;
-		synchronized (blocks) {
-			cb = blocks.get(bp);
+		Block b;
+		synchronized (renderBlocks) {
+			b = renderBlocks.get(cpt);
 		}
-		if (cb == null) {
-//			log("gen cam block " + cpf[0] + "," + cpf[1] + "," + cpf[2] +
-//					" > " + cpi[0] + "," + cpi[1] +
-//					" > " + bp.getX() + "," + bp.getY());
-			addBlock(bp);
-			return true;
-		} else {
-			// where is camera looking at
-			float[] cof = c.getRotation();
-			// looking down: pos x, looking up: neg x, rot around x axis
-			// rotating left: neg y, looking right: pos y, rot around y axis
-			// z never changes, tilting left-right
-			short blkDim = Block.getDim();
-			short hDim = (short) (blkDim / 2);
-			// 0-angle means straight on
-			float far = v.getFar() + blkDim * 2;
-			short depth = (short) Math.ceil(far);
-//			log("depth=" + depth + " far=" + (depth / blkDim) + " ss=" + smallSleep);
-			for (int i = 1; i <= (depth / hDim) ; i++) {
-				float angle = 45f / i;
-				for (int a = -4 * i; a <= 4 * i; a++) {
-					int dx = (int) (i * -hDim * Math.sin(cof[0] + a * angle));
-					int dy = (int) (i * -hDim * Math.cos(cof[1] + a * angle));
-					int[] coi = new int[] { cpi[0] + dx, cpi[1] + dy, };
-					Point2i op = Block.calcCenter(coi[0], coi[1]);
-					Block ob;
-					synchronized (blocks) {
-						ob = blocks.get(op);
-					}
-					if (ob == null) {
-//						log("looking at " + cof[0] + "," + cof[1] + "," + cof[2] +
-//								" > " + dx + "x" + dy +
-//								" > " + coi[0] + "," + coi[1] +
-//								" > " + op.getX() + "," + op.getY());
-						addBlock(op);
-						return true;
+		// has it allready been added?
+		if (b == null) {
+			synchronized (addBlocks) {
+				b = addBlocks.get(cpt);
+			}
+		}
+		// try cache
+		if (b == null) {
+			synchronized (cacheBlocks) {
+				b = cacheBlocks.get(cpt);
+				if (b != null) { // available and ready for re-use
+					cacheBlocks.remove(cpt);
+					synchronized (renderBlocks) {
+						renderBlocks.put(cpt, b);
 					}
 				}
 			}
 		}
-		return false;
+		if (b == null) {
+//			log("gen cam block " + cpf[0] + "," + cpf[1] + "," + cpf[2] +
+//					" > " + cpi[0] + "," + cpi[1] +
+//					" > " + bp.getX() + "," + bp.getY());
+			addBlock(cpt);
+//			return true;
+		} else {
+			// looking down: pos x, looking up: neg x, rot around x axis
+			// rotating left: neg y, looking right: pos y, rot around y axis
+			// z never changes, tilting left-right
+			int dim = Block.getDim();
+			// 0-angle means straight on
+			float far = v.getFar() + dim * 2f;
+			far = (float) (dim * Math.floor(far / dim));
+			Point3f pt;
+			if (!cpt.equals(lastPoint)) { // moved, start over
+				log("moved, starting over");
+				delta[0] = 0f;
+				delta[1] = 0f;
+				delta[2] = 0f;
+				radius = dim;
+				stage = 0;
+			}
+			while (null != b) {
+				pt = new Point3f(cpt.getX() + delta[0], cpt.getY() + delta[1], cpt.getZ() + delta[2]);
+				// in view range
+				synchronized (renderBlocks) {
+					b = renderBlocks.get(pt);
+				}
+				// has it allready been added?
+				if (b == null) {
+					synchronized (addBlocks) {
+						b = addBlocks.get(pt);
+					}
+				}
+				// try cache
+				if (b == null) {
+					synchronized (cacheBlocks) {
+						b = cacheBlocks.get(pt);
+						if (b != null) {
+							cacheBlocks.remove(pt);
+							synchronized (renderBlocks) {
+								renderBlocks.put(pt, b);
+							}
+						}
+					}
+				}
+				if (b == null) {
+//							log("looking at " + cof[0] + "," + cof[1] + "," + cof[2] +
+//								" > " + dx + "x" + dy +
+//								" > " + coi[0] + "," + coi[1] +
+//								" > " + op.getX() + "," + op.getY());
+//							log("requesting to add block at [" + pt.getX() + ", " + pt.getY() + ", " + pt.getZ() + "]");
+					addBlock(pt);
+//							return true;
+				} else { // next
+					if (0 == stage) { // init z = 1 plane
+						delta[0] = -radius;
+						delta[1] = -dim*2;//-radius;
+						delta[2] = radius;
+						stage++;
+					} else if (1 == stage || 3 == stage) {
+						delta[0] += dim;
+						if (delta[0] >= radius) {
+							delta[0] = -radius;
+							delta[1] += dim;
+							if (delta[1] >= dim*2) {//radius) {
+								stage++;
+							}
+						}
+					} else if (2 == stage) { // init z = -1 plane
+						delta[0] = -radius;
+						delta[1] = -dim*2;//-radius;
+						delta[2] = -radius;
+						stage++;
+					} else if (4 == stage) { // init y = 1 plane
+						delta[0] = -radius;
+						delta[1] = radius;
+						delta[2] = -radius;
+						stage++;
+					} else if (5 == stage || 7 == stage) {
+						delta[0] += dim;
+						if (delta[0] >= radius) {
+							delta[0] = -radius;
+							delta[2] += dim;
+							if (delta[2] >= radius) {
+								stage++;
+							}
+						}
+					} else if (6 == stage) { // init y = -1 plane
+						delta[0] = -radius;
+						delta[1] = -radius;
+						delta[2] = -radius;
+						stage++;
+					} else if (8 == stage) { // init x = 1 plane
+						delta[0] = radius;
+						delta[1] = -dim*2;//-radius;
+						delta[2] = -radius;
+						stage++;
+					} else if (9 == stage || 11 == stage) {
+						delta[1] += dim;
+						if (delta[1] >= dim*2) {//radius) {
+							delta[1] = -radius;
+							delta[2] += dim;
+							if (delta[2] >= radius) {
+								stage++;
+							}
+						}
+					} else if (10 == stage) {
+						delta[0] = -radius;
+						delta[1] = -radius;
+						delta[2] = -radius;
+						stage++;
+					}
+					if (stage >= 12) {
+						stage = 0; // start over
+						radius += dim;
+						if (radius > far) {
+							log("all generated");
+							return 2; // all done
+						}
+					}
+//							log("next is [" + d[0] + ", " + d[1] + ", " + d[2] + "] " + s[0] + "," + s[1] + "," + s[2]);
+				}
+			}
+		}
+		lastPoint = cpt;
+		return (null == b) ? 0 : 1; // block was not found (was added)
 	}
 	
 	protected void dropBlocks(Camera c, Viewport v) {
 		float[] camPos = c.getPosition();
 		short blkDim = Block.getDim();
-		float dim = v.getFar() + blkDim * 4;
-		synchronized (blocks) {
-			for (Point2i p : blocks.keySet()) {
-				if (p.getX() < camPos[0] - dim || p.getX() > camPos[0] + dim ||
-						p.getY() < camPos[2] - dim || p.getY() > camPos[2] + dim) {
-					Block b = blocks.remove(p);
-					b.destroy();
-//					log("removed block @ " + p.getX() + "x" + p.getY());
+		float far = v.getFar() + blkDim * 4;
+		synchronized (renderBlocks) {
+			for (Point3f p : renderBlocks.keySet()) {
+				if (p.getX() < camPos[0] - far || p.getX() > camPos[0] + far ||
+						/*p.getY() < camPos[1] - dim || p.getY() > camPos[1] + dim ||*/
+						p.getZ() < camPos[2] - far || p.getZ() > camPos[2] + far) {
+					Block b = renderBlocks.remove(p);
+//					b.destroy();
+					synchronized (cacheBlocks) {
+						cacheBlocks.put(p, b);
+					}
+					log("removed block @ " + p.getX() + "x" + p.getY() + "x" + p.getZ());
 //					log("map size " + m.size() + " blocks.");
 					break; // one at a time
 				}
@@ -321,13 +331,14 @@ public class Terrain {
 		}
 	}
 	
-	protected Block addBlock(Point2i p) {
-		Block b = createBlock(p.getX(), p.getY());
-		b.initVBO();
-		synchronized (blocks) {
-			blocks.put(p, b);
+	protected Block addBlock(Point3f p) {
+		Block b = createBlock(p.getX(), p.getY(), p.getZ());
+		b.generate();
+		// vbo stuff is done in (main GL) drawing thread
+		synchronized (addBlocks) {
+			addBlocks.put(p, b);
 		}
-//		log("added block @ " + p.getX() + "x" + p.getY());
+//		log("added block @ " + p.getX() + "x" + p.getY() + "x" + p.getZ());
 		checkLowHigh(b.lowest(), b.highest());
 //		log("terrain lowest " + lowest + " & highest " + highest);
 //		synchronized (blocks) {
@@ -347,39 +358,68 @@ public class Terrain {
 	}
 	
 	public void draw() {
-//		long start = System.currentTimeMillis();
-//		int cnt = 0;
-		synchronized (blocks) {
-			for (Block b : blocks.values()) {
-				b.draw();
-//				cnt++;
+		long time = Sys.getTime();
+		int vc = 0;
+		int bc = 0;
+		int fc = 0;
+		Block a = null;
+		synchronized (addBlocks) {
+			Iterator<Block> it = addBlocks.values().iterator();
+			if (it.hasNext()) {
+				a = it.next();
+				it.remove();
 			}
 		}
-//		long duration = System.currentTimeMillis() - start;
-//		if (duration > 1000 / 60) {
-//			log("terrain.draw " + cnt + " blocks in " + duration + " ms");
-//		}
+		if (a != null && a.getFaceCount() > 0 && a.getVboId() == 0) {
+			// guaranteed to be called within GL main thread
+			a.initVBO();
+			vc++;
+		}
+		synchronized (renderBlocks) {
+			if (a != null) {
+				renderBlocks.put(new Point3f(a.getX(), a.getY(), a.getZ()), a);
+			}
+			for (Block b : renderBlocks.values()) {
+				b.draw();
+				bc++;
+				fc += b.getFaceCount();
+			}
+		}
+		// it's not nice, but we have to free vbo somewhere
+		Block c = null;
+		synchronized (removeBlocks) {
+			if (removeBlocks.size() > 0) {
+				c = removeBlocks.remove(0);
+			}
+		}
+		if (c != null) {
+			c.freeVbo();
+			c.destroy();
+			vc++;
+		}
+		long duration = Sys.getTime() - time;
+		if (duration > 0) {//1000 / 60) {
+			log("terrain.draw " + vc + " vbos; " + bc + " blocks; " + fc + " faces in " + duration  + " ms");
+		}
 	}
 	
 	public void destroy() {
 		stopCalcer();
-		for (Block b : blocks.values()) {
+		for (Block b : addBlocks.values()) {
 			b.destroy();
 		}
-	}
-	
-	public float getHeightAt(int x, int y) {
-		final Point2i c = Block.calcCenter(x, y);
-		// terrain coords to block center coords
-		final Block b;
-		synchronized (blocks) {
-			b = blocks.get(c);
+		for (Block b : renderBlocks.values()) {
+			b.freeVbo();
+			b.destroy();
 		}
-		float h = 0;
-		if (b != null) {
-			h = b.getHeightAt(x, y);
+		for (Block b : cacheBlocks.values()) {
+			b.freeVbo();
+			b.destroy();
 		}
-		return h;
+		for (Block b : removeBlocks) {
+			b.freeVbo();
+			b.destroy();
+		}
 	}
 	
 	protected void log(String s) {

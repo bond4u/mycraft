@@ -2,7 +2,8 @@ package org.mycraft.client;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-//import java.util.Random;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.lwjgl.opengl.ARBBufferObject;
 import org.lwjgl.opengl.ARBVertexBufferObject;
@@ -12,7 +13,7 @@ import org.noise.IFunc2D;
 
 public class Block {
 	
-	private static final int DIM = 15; // block dimensions
+	private static final int DIM = 5; // block dimensions (block data is byte)
 	// = center + x rows & x columns & x layers
 	// constants
 	private static final int BITS_PER_BYTE = Byte.SIZE; // 8
@@ -26,54 +27,120 @@ public class Block {
 	private static final int BYTES_PER_COLOR = COMPONENTS_PER_COLOR * BYTES_PER_COLORCOMPONENT; // 3 * 1 = 3
 	private static final int COLORBYTES_PER_FACE = POINTS_PER_FACE * BYTES_PER_COLOR; // 4 * 3 = 12
 	
-	private final Terrain t;
-	private final int x;
-	private final int y;
-//	private final Random rnd;
-	private final IFunc2D func;
-	private final float data[][];
-	private final int bufId;
-	private float lowest;
-	private float highest;
+	private final Terrain terra;
+	private final float blockX; // min(cellx)
+	private final float blockY; // min(celly)
+	private final float blockZ; // min(cellz)
+	private byte data[][][];
+	private int faceCount = 0;
+	private int vertexCount = 0;
+	private int vxBufId = 0;
+	private byte lowest;
+	private byte highest;
 	
-	private int facesCount;
 	private int vertexBytes;
 	private int colorBytes;
 	
-	public Block(Terrain t, int x, int y/*, Random rnd*/, IFunc2D f) {
-		this.t = t;
-		this.x = x;
-		this.y = y;
-//		log("Block.ctor(" + x + "," + y + ")");
-//		this.rnd = rnd;
-		this.func = f;
-		this.data = gen();
-		this.bufId = createVBO();
-//		initVBO();
+	public Block(Terrain t, float x, float y, float z) {
+		this.terra = t;
+		this.blockX = x;
+		this.blockY = y;
+		this.blockZ = z;
+//		log("Block.ctor(" + x + "," + y + "," + z + ")");
 	}
 	
 	public static short getDim() {
 		return DIM;
 	}
 	
-	private float[][] gen() {
+	public float getX() {
+		return blockX;
+	}
+	
+	public float getY() {
+		return blockY;
+	}
+	
+	public float getZ() {
+		return blockZ;
+	}
+	
+	public void generate() {
+		if (data != null) {
+			log("block " + blockX + ", " + blockY + ", " + blockZ + " already has data");
+			return;
+		}
 		resetLowHigh();
-		final int d = (DIM - 1) / 2;
-//		log("gen range " + DIM + " vs delta " + d);
-		final float[][] a = new float[DIM][DIM];
-		for (int x2 = 0; x2 < DIM; x2++) {
-			for (int y2 = 0; y2 < DIM; y2++) {
-//				a[x2][y2] = (short) (rnd.nextInt(DIM) - d);
-				float x3 = x + (x2 - d);
-				float y3 = y + (y2 - d);
+		final int dim = getDim();
+		if (data == null) {
+			data = new byte[dim][dim][dim];
+		}
+		faceCount = 0;
+		Set<Point3f> verts = new HashSet<Point3f>();
+		IFunc2D func = terra.getFunc();
+//		log("generating block @ " + blockX + ", " + blockY + ", " + blockZ);
+		for (byte iX = 0; iX < dim; iX++) {
+			for (byte iZ = 0; iZ < dim; iZ++) {
+				float cellX = blockX + iX;
+				float cellZ = blockZ + iZ; // Y is up
 //				log("[" + x2 + "," + y2 + "] = [" + x3 + "," + y3 + "]");
-				float v = func.get(x3, y3);
-				checkLowHigh(v);
-				a[x2][y2] = v;
+				float cellY = func.get(cellX, cellZ);
+				float f = (cellY >= 0f) ? cellY + 0.49999999f : cellY - 0.49999999f;
+				double d = (f >= 0f) ? Math.floor(f) : Math.ceil(f);
+				float cellH = (float) d;
+				// height - it may too low for this block; or too high; slice it into range [0..dim]
+				float low = cellH - blockY; // Y is up
+				float high = Math.max(0f, low); // 0 or higher
+//				log("cellX=" + cellX + " cellY=" + cellY + " cellZ=" + cellZ + " low=" + lowZ + " high=" + highZ);
+				cellH = Math.min(dim, high); // "dim" or lower
+				byte h = (byte) cellH;
+				faceCount += h*6;
+//				log("cell=" + cellZ + " h=" + h + " faceCount=" + faceCount);
+				checkLowHigh(h);
+				// fill the the 3rd dim
+				for (byte iY = 0; iY < dim; iY++) {
+					byte t = (byte) (h > iY ? 1 : 0);
+//					log("type=" + t + " for height " + iZ);
+					if (1 == t) { // earth
+						Point3f p = new Point3f(iX, iY, iZ); // front bottom left
+						verts.add(p);
+						p = new Point3f(iX, iY+1, iZ); // front top left
+						verts.add(p);
+						p = new Point3f(iX+1, iY, iZ); // front bottom right
+						verts.add(p);
+						p = new Point3f(iX+1, iY+1, iZ); // front top right
+						verts.add(p);
+						p = new Point3f(iX, iY, iZ+1); // back bottom left
+						verts.add(p);
+						p = new Point3f(iX, iY+1, iZ+1); // back top left
+						verts.add(p);
+						p = new Point3f(iX+1, iY, iZ+1); // back bottom right
+						verts.add(p);
+						p = new Point3f(iX+1, iY+1, iZ+1); // back top right
+						verts.add(p);
+					}
+					data[iX][iY][iZ] = t; // block types: 0-air, 1-earth
+				}
 			}
 		}
+		vertexCount = verts.size();
+//		log("[" + blockX + "," + blockY + "," + blockZ + "] faces=" + faceCount + " l=" + lowest + " h=" + highest);
+//		if (lowest >= highest) {
+//			log("flat block: low=" + lowest + "; high=" + highest);
+//		}
 		assert lowest == highest : "flat block";
-		return a;
+	}
+	
+	protected byte[][][] getData() {
+		return data;
+	}
+	
+	public int getFaceCount() {
+		return faceCount;
+	}
+	
+	public int getVertexCount() {
+		return vertexCount;
 	}
 	
 	protected void resetLowHigh() {
@@ -81,7 +148,7 @@ public class Block {
 		highest = Byte.MIN_VALUE;
 	}
 	
-	protected void checkLowHigh(float h) {
+	protected void checkLowHigh(byte h) {
 		if (h < lowest) {
 			lowest = h;
 		}
@@ -98,22 +165,23 @@ public class Block {
 		return highest;
 	}
 	
-	protected int createVBO() {
-		final int id = ARBBufferObject.glGenBuffersARB();
-		logGlErrorIfAny();
-		return id;
+	public int getVboId() {
+		return vxBufId;
 	}
 	
 	public void initVBO() {
-		ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, this.bufId);
+		if (faceCount <= 0 || vxBufId != 0) {
+			return;
+		}
+		vxBufId = ARBBufferObject.glGenBuffersARB();
 		logGlErrorIfAny();
-//		log("gl buffer id " + this.bufId);
-		facesCount = countQuads(); //BYTES_PER_VERTICES + BYTES_PER_COLORS;
-//		log("faces count " + facesCount);
-		vertexBytes = facesCount * VERTEXBYTES_PER_FACE;
-		colorBytes = facesCount * COLORBYTES_PER_FACE;
+//		log("created vbo " + vxBufId);
+		ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, vxBufId);
+		logGlErrorIfAny();
+		vertexBytes = faceCount * VERTEXBYTES_PER_FACE;
+		colorBytes = faceCount * COLORBYTES_PER_FACE;
 		final int size = vertexBytes + colorBytes;
-//		log("vertices=" + BYTES_PER_VERTICES + " bytes, colors=" + BYTES_PER_COLORS + " bytes = "
+//		log("faces=" + faceCount + " vertex=" + vertexBytes + " bytes, color=" + colorBytes + " bytes = "
 //				+ "total=" + size + " bytes");
 		// create VBO
 		ARBVertexBufferObject.glBufferDataARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB,
@@ -123,14 +191,18 @@ public class Block {
 		ByteBuffer buf = ARBVertexBufferObject.glMapBufferARB(
 				ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB,
 				ARBVertexBufferObject.GL_WRITE_ONLY_ARB, size, null);
-		buf = buf.order(ByteOrder.nativeOrder());
+		if (buf != null) {
+			buf = buf.order(ByteOrder.nativeOrder());
+		}
 //		log("buffer cap:" + buf.capacity() + " lim:" + buf.limit() +
 //				" pos:" + buf.position() + " rem:" + buf.remaining() + " dir:" + buf.isDirect() +
 //				" ro:" + buf.isReadOnly() + " ord:" + buf.order());
 		logGlErrorIfAny();
 		// fill buffer with data
 		fillVBO(buf);
-		buf.flip();
+		if (buf != null) {
+			buf.flip();
+		}
 		// unmap
 		ARBVertexBufferObject.glUnmapBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB);
 		logGlErrorIfAny();
@@ -139,194 +211,245 @@ public class Block {
 		logGlErrorIfAny();
 	}
 	
-	private int countQuads() {
-		int cnt = 0;
-		int cnt2 = 0;
-		int cnt3 = 0;
-		for (int x = 0; x < DIM; x++) {
-			for (int y = 0; y < DIM; y++) {
-				cnt++;
-				final float height = data[x][y];
-				// right edge
-				final float height2 = (x < DIM - 1) ? data[x+1][y] : queryHeightAt(x + 1, y);
-				if (height != height2) {
-					cnt2++;
-				}
-				// top edge
-				final float height3 = (y < DIM - 1) ? data[x][y+1] : queryHeightAt(x, y + 1);
-				if (height != height3) {
-					cnt3++;
-				}
-			}
-		}
-//		log("cnts=" + cnt + " / " + cnt2 + " / " + cnt3 + " / " + (cnt+cnt2+cnt3));
-		return cnt + cnt2 + cnt3;
-	}
-	
 	private void fillVBO(ByteBuffer b) {
-		for (int x = 0; x < DIM; x++) {
-			for (int y = 0; y < DIM; y++) {
-				final float height = data[x][y];
-				// quad corners
-				b.putFloat((x + 1));
-				b.putFloat(height);
-				b.putFloat(y);
-				
-				b.putFloat(x);
-				b.putFloat(height);
-				b.putFloat(y);
-				
-				b.putFloat(x);
-				b.putFloat(height);
-				b.putFloat((y + 1));
-				
-				b.putFloat((x + 1));
-				b.putFloat(height);
-				b.putFloat((y + 1));
-				// right edge
-				final float height2 = (x < DIM - 1) ? data[x+1][y] : queryHeightAt(x + 1, y);
-				if (height != height2) {
-					b.putFloat((x + 1));
-					b.putFloat(height2);
-					b.putFloat(y);
-					
-					b.putFloat((x + 1));
-					b.putFloat(height);
-					b.putFloat(y);
-					
-					b.putFloat((x + 1));
-					b.putFloat(height);
-					b.putFloat((y + 1));
-					
-					b.putFloat((x + 1));
-					b.putFloat(height2);
-					b.putFloat((y + 1));
-				}
-				// top edge
-				final float height3 = (y < DIM - 1) ? data[x][y+1] : queryHeightAt(x, y + 1);
-				if (height != height3) {
-					b.putFloat((x + 1));
-					b.putFloat(height);
-					b.putFloat((y + 1));
-					
-					b.putFloat(x);
-					b.putFloat(height);
-					b.putFloat((y + 1));
-					
-					b.putFloat(x);
-					b.putFloat(height3);
-					b.putFloat((y + 1));
-					
-					b.putFloat((x + 1));
-					b.putFloat(height3);
-					b.putFloat((y + 1));
-				}
-			}
-		}
+		final int dim = getDim();
+		final byte zero = Byte.MIN_VALUE;
+		final byte alpha = Byte.MAX_VALUE;
 		final byte val = 24; // TEMP
-		if (val <= 0) {
-			log("terrain has no height: " + val);
-		}
-		assert val <= 0 : "terrain has no height";
-		//final int step = 256 / DIM;
 		final float step = 128 / (float) val; // 255/32=7.96875
-		//final int base = (1 + (len/*DIM*/ - 1) / 2) * step;
 		final float base = step * 8; // 16*7.96875=127.5
-//		log("step " + step + " & base " + base);
-		final byte z = Byte.MIN_VALUE;
-		final byte a = Byte.MAX_VALUE;
-		for (int x = 0; x < DIM; x++) {
-			for (int y = 0; y < DIM; y++) {
-				final float height = data[x][y];
-				if (height < -val+1) {
-					log("block is lower than -16: " + height);
-				}
-				if (height > val-1) {
-					log("block is higher than 16: " + height);
-				}
-				assert height > t.highest() : "block has higher quad than terrain";
-				// rgb for each quad corner
-				byte c = (byte) (base + height * step);
-//				c &= 0xFF;
-//				log("h=" + height + " base=" + base + " step=" + step + " c=" + c);
-				b.put(z);
-				b.put(c);
-				b.put(z);
-				b.put(a);
-				
-				b.put(z);
-				b.put(c);
-				b.put(z);
-				b.put(a);
-				
-				b.put(z);
-				b.put(c);
-				b.put(z);
-				b.put(a);
-				
-				b.put(z);
-				b.put(c);
-				b.put(z);
-				b.put(a);
-				// right edge
-				final float height2 = (x < DIM - 1) ? data[x+1][y] : queryHeightAt(x + 1, y);
-				if (height != height2) {
-//					short s2 = (short) (base + height2 * step);
-					byte c2 = (byte) (base + height2 * step);
-//					c2 &= 0xFF;
-//					log("s2=" + s2 + " c2=" + c2);
-					b.put(z);
-					b.put(c2);
-					b.put(z);
-					b.put(a);
-					
-					b.put(z);
-					b.put(c);
-					b.put(z);
-					b.put(a);
-					
-					b.put(z);
-					b.put(c);
-					b.put(z);
-					b.put(a);
-					
-					b.put(z);
-					b.put(c2);
-					b.put(z);
-					b.put(a);
-				}
-				// top edge
-				final float height3 = (y < DIM - 1) ? data[x][y+1] : queryHeightAt(x, y + 1);
-				if (height != height3) {
-//					short s3 = (short) (base + height3 * step);
-					byte c3 = (byte) (base + height3 * step);
-//					c3 &= 0xFF;
-//					log("s3=" + s3 + " c3=" + c3);
-					b.put(z);
-					b.put(c);
-					b.put(z);
-					b.put(a);
-					
-					b.put(z);
-					b.put(c);
-					b.put(z);
-					b.put(a);
-					
-					b.put(z);
-					b.put(c3);
-					b.put(z);
-					b.put(a);
-					
-					b.put(z);
-					b.put(c3);
-					b.put(z);
-					b.put(a);
-				}
-			}
-		}
+		for (int x = 0; x < dim; x++) {
+			for (int z = 0; z < dim; z++) {
+				for (int y = 0; y < dim; y++) {
+					byte t = data[x][y][z];
+					if (t != 0) {
+						byte c = (byte) (base + (blockY+y-1) * step);
+						// top face
+						b.putFloat((x + 1));
+						b.putFloat(y+1);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// top2
+						b.putFloat(x);
+						b.putFloat(y+1);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// top3
+						b.putFloat(x);
+						b.putFloat(y+1);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// top4
+						b.putFloat((x + 1));
+						b.putFloat(y+1);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// right face
+						b.putFloat((x + 1));
+						b.putFloat(y);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// right2
+						b.putFloat((x + 1));
+						b.putFloat(y+1);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// right3
+						b.putFloat((x + 1));
+						b.putFloat(y+1);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// right4
+						b.putFloat((x + 1));
+						b.putFloat(y);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// front face
+						b.putFloat((x + 1));
+						b.putFloat(y+1);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// front2
+						b.putFloat(x);
+						b.putFloat(y+1);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// front3
+						b.putFloat(x);
+						b.putFloat(y);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// front4
+						b.putFloat((x + 1));
+						b.putFloat(y);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// left face
+						b.putFloat(x);
+						b.putFloat(y+1);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// left2
+						b.putFloat(x);
+						b.putFloat(y);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// left3
+						b.putFloat(x);
+						b.putFloat(y);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// left4
+						b.putFloat(x);
+						b.putFloat(y+1);
+						b.putFloat((z + 1));
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// back face
+						b.putFloat((x + 1));
+						b.putFloat(y);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// front2
+						b.putFloat(x);
+						b.putFloat(y);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// front3
+						b.putFloat(x);
+						b.putFloat(y+1);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// front4
+						b.putFloat((x + 1));
+						b.putFloat(y+1);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// top face
+						b.putFloat((x + 1));
+						b.putFloat(y);
+						b.putFloat(z+1);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// top2
+						b.putFloat(x);
+						b.putFloat(y);
+						b.putFloat(z+1);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// top3
+						b.putFloat(x);
+						b.putFloat(y);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+						// top4
+						b.putFloat((x + 1));
+						b.putFloat(y);
+						b.putFloat(z);
+						// color
+						b.put(zero);
+						b.put(c);
+						b.put(zero);
+						b.put(alpha);
+					}
+				} // y
+			} // z
+		} // x
 	}
 	
 	public void draw() {
+		if (faceCount <= 0 || vxBufId == 0) {
+			return;
+		}
 //		long start = System.currentTimeMillis();
 	    GL11.glPushMatrix();
 	    logGlErrorIfAny();
@@ -338,7 +461,7 @@ public class Block {
 //	    GL11.glScalef(0.5f, 0.5f, 0.5f);
 //	    logGlErrorIfAny();
 //	    long start1 = System.currentTimeMillis();
-	    GL11.glTranslatef(this.x - DIM / 2f, 0f, this.y - DIM / 2f);
+	    GL11.glTranslatef(blockX, blockY, blockZ);
 	    logGlErrorIfAny();
 //	    long dura1 = System.currentTimeMillis() - start1;
 //	    if (dura1 > 1000 / 60) {
@@ -356,7 +479,7 @@ public class Block {
 //	    }
 	    
 //	    long start3 = System.currentTimeMillis();
-	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, bufId);
+	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, vxBufId);
 	    logGlErrorIfAny();
 //	    long dura3 = System.currentTimeMillis() - start3;
 //	    if (dura3 > 1000 / 60) {
@@ -371,9 +494,9 @@ public class Block {
 	    // .. but it's working now
 	    
 //	    long start4 = System.currentTimeMillis();
-	    GL11.glVertexPointer(COMPONENTS_PER_POINT, GL11.GL_FLOAT, 0, 0);
+	    GL11.glVertexPointer(COMPONENTS_PER_POINT, GL11.GL_FLOAT, BYTES_PER_VERTEX + BYTES_PER_COLOR, 0);
 	    logGlErrorIfAny();
-	    GL11.glColorPointer(BYTES_PER_COLOR, GL11.GL_BYTE, 0, vertexBytes);
+	    GL11.glColorPointer(BYTES_PER_COLOR, GL11.GL_BYTE, BYTES_PER_VERTEX + BYTES_PER_COLOR, BYTES_PER_VERTEX);
 	    logGlErrorIfAny();
 //	    long dura4 = System.currentTimeMillis() - start4;
 //	    if (dura4 > 1000 / 60) {
@@ -381,7 +504,7 @@ public class Block {
 //	    }
 	    
 //	    long start5 = System.currentTimeMillis();
-	    GL11.glDrawArrays(GL11.GL_QUADS, 0, facesCount * POINTS_PER_FACE);
+	    GL11.glDrawArrays(GL11.GL_QUADS, 0, faceCount * POINTS_PER_FACE);
 	    logGlErrorIfAny();
 //	    long dura5 = System.currentTimeMillis() - start5;
 //	    if (dura5 > 1000 / 60) {
@@ -404,41 +527,29 @@ public class Block {
 //	    }
 	}
 	
+	public void freeVbo() {
+		if (0 != vxBufId) {
+//			System.out.println("deleting vboId=" + vxBufId);
+			ARBVertexBufferObject.glDeleteBuffersARB(vxBufId);
+			logGlErrorIfAny();
+			vxBufId = 0;
+		}
+	}
+	
 	public void destroy() {
-		ARBVertexBufferObject.glDeleteBuffersARB(bufId);
-	    logGlErrorIfAny();
+		if (data != null) {
+			data = null;
+		}
+		faceCount = 0;
 	}
 	
-	private float queryHeightAt(int x, int y) {
-		final int d = (DIM - 1) / 2;
-		final int landX = this.x - d + x; // 9 -> 5
-		final int landY = this.y - d + y; // 0 -> -4
-		float h = t.getHeightAt(landX, landY);
-		return h;
-	}
-	
-	public static Point2i calcCenter(int x, int y) {
-		final short d = (DIM - 1) / 2; // -8+7=-1/15=-1
-		final int x1 = x + d + (x < -d ? 1 : 0);
-		final int y1 = y + d + (y < -d ? 1 : 0);
-		final int x2 = x1 / DIM; // -7+7=0/15=0
-		final int y2 = y1 / DIM; // 0+7=7/15=0
-		final int x3 = x2 - (x < -d ? 1 : 0); // neg bonus
-		final int y3 = y2 - (y < -d ? 1 : 0);
+	public static Point3f calcBlockPoint(float x, float y, float z) {
+		final int dim = getDim();
+		final float bx = dim * (float) Math.floor(x / dim);
+		final float by = dim * (float) Math.floor(y / dim);
+		final float bz = dim * (float) Math.floor(z / dim);
 //		System.out.println("x=" + x + " y=" + y + " xc=" + xc + " yc=" + yc);
-		return new Point2i(x3 * DIM, y3 * DIM); // 8+7=15/15=1
-	}
-	
-	public float getHeightAt(int x, int y) {
-		final int d = (DIM - 1) / 2;
-		final int dx = x + d - this.x;
-		final int dy = y + d - this.y;
-		assert Math.abs(this.x - x) <= d : "x must not differ more than 4";
-		assert Math.abs(this.y - y) <= d : "y must not differ more than 4";
-		assert dx >= 0 && dx < DIM : "x idx out of array";
-		assert dy >= 0 && dy < DIM : "y idx out of array";
-		final float h = data[dx][dy];
-		return h;
+		return new Point3f(bx, by, bz); // 8+7=15/15=1
 	}
 	
 	protected void log(String s) {
