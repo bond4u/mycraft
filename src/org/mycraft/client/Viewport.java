@@ -13,7 +13,8 @@ import org.lwjgl.util.glu.GLU;
 
 public class Viewport {
 	
-	private static final int HEIGHT = 600; //480;
+//	private static final int HEIGHT = 480; //*3/2=720
+	private static final int HEIGHT = 640; //*3/2=960
 	private static final int WIDTH = HEIGHT * 3 / 2;
 	
 	private static final float fovy = 65f;
@@ -58,6 +59,7 @@ public class Viewport {
 		warn("glLoadTransposeMatrixfARB() supported: " + GLContext.getCapabilities().GL_ARB_transpose_matrix);
 		logGlErrorIfAny();
 
+		log("viewport width=" + getWidth() + " & height=" + getHeight());
 		GL11.glViewport(0, 0, getWidth(), getHeight());
 		logGlErrorIfAny();
 		
@@ -89,7 +91,7 @@ public class Viewport {
 		}
 		
 		double r = getWidth() / (double) getHeight();
-		log("window ratio " + r);
+		log("window W:H ratio " + r);
 		GLU.gluPerspective(fovy, (float) r, zNear, zFar);
 		logGlErrorIfAny();
 		
