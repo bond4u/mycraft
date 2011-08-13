@@ -237,60 +237,72 @@ public class Terrain {
 				} else { // next
 					if (0 == stage) { // init z = 1 plane
 						delta[0] = -radius;
-						delta[1] = -dim*2;//-radius;
+						delta[1] = Math.max(-radius, -dim*2);//-radius;
 						delta[2] = radius;
+//						log(stage + " from " + delta[0] + ", " + delta[1] + ", " + delta[2] + "; r=" + radius);
 						stage++;
 					} else if (1 == stage || 3 == stage) {
 						delta[0] += dim;
-						if (delta[0] >= radius) {
+//						log(stage + " to " + delta[0] + ", " + delta[1] + ", " + delta[2]);
+						if (delta[0] > radius) {
 							delta[0] = -radius;
 							delta[1] += dim;
-							if (delta[1] >= dim*2) {//radius) {
+//							log(stage + " to2 " + delta[0] + ", " + delta[1] + ", " + delta[2] + "; r=" + radius);
+							if (delta[1] > Math.min(radius, dim*2)) {//radius) {
 								stage++;
 							}
 						}
 					} else if (2 == stage) { // init z = -1 plane
 						delta[0] = -radius;
-						delta[1] = -dim*2;//-radius;
+						delta[1] = Math.max(-radius, -dim*2);//-radius;
 						delta[2] = -radius;
+//						log(stage + " from " + delta[0] + ", " + delta[1] + ", " + delta[2] + ", r=" + radius);
 						stage++;
 					} else if (4 == stage) { // init y = 1 plane
 						delta[0] = -radius;
-						delta[1] = radius;
+						delta[1] = Math.min(dim*2, radius);
 						delta[2] = -radius;
+//						log(stage + " from " + delta[0] + ", " + delta[1] + ", " + delta[2] + "; r=" + radius);
 						stage++;
 					} else if (5 == stage || 7 == stage) {
 						delta[0] += dim;
-						if (delta[0] >= radius) {
+//						log(stage + " to " + delta[0] + ", " + delta[1] + ", " + delta[2]);
+						if (delta[0] > radius) {
 							delta[0] = -radius;
 							delta[2] += dim;
-							if (delta[2] >= radius) {
+//							log(stage + " to2 " + delta[0] + ", " + delta[1] + ", " + delta[2]);
+							if (delta[2] > radius) {
 								stage++;
 							}
 						}
 					} else if (6 == stage) { // init y = -1 plane
 						delta[0] = -radius;
-						delta[1] = -radius;
+						delta[1] = Math.max(-dim*2, -radius);
 						delta[2] = -radius;
+//						log(stage + " from " + delta[0] + ", " + delta[1] + ", " + delta[2] + "; r=" + radius);
 						stage++;
 					} else if (8 == stage) { // init x = 1 plane
 						delta[0] = radius;
-						delta[1] = -dim*2;//-radius;
+						delta[1] = Math.max(-radius, -dim*2);
 						delta[2] = -radius;
+//						log(stage + " from " + delta[0] + ", " + delta[1] + ", " + delta[2] + "; r=" + radius);
 						stage++;
 					} else if (9 == stage || 11 == stage) {
 						delta[1] += dim;
-						if (delta[1] >= dim*2) {//radius) {
-							delta[1] = -radius;
+//						log(stage + " to " + delta[0] + ", " + delta[1] + ", " + delta[2] + "; r=" + radius);
+						if (delta[1] > Math.min(radius, dim*2)) {//radius) {
+							delta[1] = Math.max(-dim*2, -radius);
 							delta[2] += dim;
-							if (delta[2] >= radius) {
+//							log(stage + " to2 " + delta[0] + ", " + delta[1] + ", " + delta[2] + "; r=" + radius);
+							if (delta[2] > radius) {
 								stage++;
 							}
 						}
-					} else if (10 == stage) {
+					} else if (10 == stage) { // init x = -1 plane
 						delta[0] = -radius;
-						delta[1] = -radius;
+						delta[1] = Math.max(-dim*2, -radius);
 						delta[2] = -radius;
+//						log(stage + " from " + delta[0] + ", " + delta[1] + ", " + delta[2] + "; r=" + radius);
 						stage++;
 					}
 					if (stage >= 12) {
@@ -398,7 +410,7 @@ public class Terrain {
 			vc++;
 		}
 		long duration = Sys.getTime() - time;
-		if (duration > 0) {//1000 / 60) {
+		if (duration > (1000 / 60)) {
 			log("terrain.draw " + vc + " vbos; " + bc + " blocks; " + fc + " faces in " + duration  + " ms");
 		}
 	}
