@@ -3,9 +3,7 @@ package org.mycraft.client;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.lwjgl.opengl.ARBBufferObject;
 import org.lwjgl.opengl.ARBVertexBufferObject;
@@ -15,7 +13,7 @@ import org.noise.IFunc2D;
 
 public class Block {
 	
-	private static final int DIM = 5; // block dimensions (block data is byte)
+	private static final int DIM = 16; // block dimensions (block data is byte)
 	// = center + x rows & x columns & x layers
 	// constants
 	private static final int BITS_PER_BYTE = Byte.SIZE; // 8
@@ -34,7 +32,11 @@ public class Block {
 	private final float blockX; // min(cellx)
 	private final float blockY; // min(celly)
 	private final float blockZ; // min(cellz)
-	private byte data[][][];
+	
+	private List<Point3f> vertices;
+	private List<Integer> colors;
+	private List<Short> indices;
+	
 	private int faceCount = 0;
 	private int vertexCount = 0;
 	private int vxBufId = 0;
@@ -90,68 +92,194 @@ public class Block {
 		return high;
 	}
 	
-	public void generate() {
-		if (data != null) {
-			log("block " + blockX + ", " + blockY + ", " + blockZ + " already has data");
-			return;
+	protected int addVertexAndColor(Point3f p, Short i, List<Point3f> vrt, List<Integer> cls, float h) {
+		vrt.add(p);
+		// add color to vertex
+		float spaceRange = (getDim() * 2.5f);
+		float colorRange = 128f;
+		float ratio = (colorRange / spaceRange);
+		byte c2 = (byte) ((colorRange / 2) + (ratio * h));
+		Integer c = 0; // r
+		c |= (c2 << 8); // g
+		c |= (0x00 << 16); // b
+		c |= (Byte.MAX_VALUE << 24); // a
+//		Integer c = 0xFF | (0xFF << 8) | (0xFF << 16) | (0xFF << 24); // rgba
+//		log("c=" + Integer.toHexString(c));
+		cls.add(c);
+		return i;
+	}
+	
+	protected short addCube(float x, float y, float z, short i,
+			List<Point3f> vrt, List<Integer> cls, List<Short> idx) {
+		// top face
+		Point3f p = new Point3f(x+1, y+1, z+1); // top right back
+		int i0 = vrt.indexOf(p);
+		if (i0 == -1) { // new point
+			float h = blockY; h += y; h += 1;
+			i0 = addVertexAndColor(p, new Short(i), vrt, cls, h);
+			i++;
+		} // else got index of existing point
+		idx.add((short)i0);
+		p = new Point3f(x+1, y+1, z); // top right front
+		int i1 = vrt.indexOf(p);
+		if (i1 == -1) {
+			float h = blockY; h += y; h += 1;
+			i1 = addVertexAndColor(p, new Short(i), vrt, cls, h);
+			i++;
 		}
+		idx.add((short)i1);
+		p = new Point3f(x, y+1, z); // top left front
+		int i2 = vrt.indexOf(p);
+		if (i2 == -1) {
+			float h = blockY; h += y; h += 1;
+			i2 = addVertexAndColor(p, new Short(i), vrt, cls, h);
+			i++;
+		}
+		idx.add((short)i2);
+		p = new Point3f(x, y+1, z+1); // top left back
+		int i3 = vrt.indexOf(p);
+		if (i3 == -1) {
+			float h = blockY; h += y; h += 1;
+			i3 = addVertexAndColor(p, new Short(i), vrt, cls, h);
+			i++;
+		}
+		idx.add((short)i3);
+		// front face
+		idx.add((short)i1);
+		p = new Point3f(x+1, y, z); // bottom right front
+		int i5 = vrt.indexOf(p);
+		if (i5 == -1) {
+			float h = blockY; h += y;
+			i5 = addVertexAndColor(p, new Short(i), vrt, cls, h);
+			i++;
+		}
+		idx.add((short)i5);
+		p = new Point3f(x, y, z); // bottom left front
+		int i6 = vrt.indexOf(p);
+		if (i6 == -1) {
+			float h = blockY; h += y;
+			i6 = addVertexAndColor(p, new Short(i), vrt, cls, h);
+			i++;
+		}
+		idx.add((short)i6);
+		idx.add((short)i2);
+		// right face
+		idx.add((short)i0);
+		p = new Point3f(x+1, y, z+1); // bottom right back
+		int i4 = vrt.indexOf(p);
+		if (i4 == -1) {
+			float h = blockY; h += y;
+			i4 = addVertexAndColor(p, new Short(i), vrt, cls, h);
+			i++;
+		}
+		idx.add((short)i4);
+		idx.add((short)i5);
+		idx.add((short)i1);
+		// left face
+		idx.add((short)i2);
+		idx.add((short)i6);
+		p = new Point3f(x, y, z+1); // bottom left back
+		int i7 = vrt.indexOf(p);
+		if (i7 == -1) {
+			float h = blockY; h += y;
+			i7 = addVertexAndColor(p, new Short(i), vrt, cls, h);
+			i++;
+		}
+		idx.add((short)i7);
+		idx.add((short)i3);
+		// back face
+		idx.add((short)i3);
+		idx.add((short)i7);
+		idx.add((short)i4);
+		idx.add((short)i0);
+		// bottom face
+		idx.add((short)i5);
+		idx.add((short)i4);
+		idx.add((short)i7);
+		idx.add((short)i6);
+		return i; // new (next) index
+	}
+	
+	protected boolean isDense(float sY, byte cY) {
+		return (sY > cY) ? true : false;
+	}
+	
+	protected void indexVertices(List<Point3f> vrt, List<Integer> cls, List<Short> idx) {
 		resetLowHigh();
 		final int dim = getDim();
-		if (data == null) {
-			data = new byte[dim][dim][dim];
-		}
-		faceCount = 0;
-		Set<Point3f> verts = new HashSet<Point3f>();
 		IFunc2D func = terra.getFunc();
-//		log("generating block @ " + blockX + ", " + blockY + ", " + blockZ);
+		short i = 0;
 		for (byte iX = 0; iX < dim; iX++) {
 			for (byte iZ = 0; iZ < dim; iZ++) {
-				float cellX = blockX + iX;
-				float cellZ = blockZ + iZ; // Y is up
-//				log("[" + x2 + "," + y2 + "] = [" + x3 + "," + y3 + "]");
-				float cellY = func.get(cellX, cellZ);
-				cellY = round(cellY);
-				cellY = height(cellY);
-				byte h = (byte) cellY;
-//				log("cell=" + cellZ + " h=" + h + " faceCount=" + faceCount);
-				checkLowHigh(h);
-				faceCount += h*6;
-				// fill the the 3rd dim
-				for (byte iY = 0; iY < dim; iY++) {
-					byte t = (byte) (h > iY ? 1 : 0);
-//					log("type=" + t + " for height " + iZ);
-					if (1 == t) { // earth
-						Point3f p = new Point3f(iX+1, iY+1, iZ); // front top right
-						verts.add(p);
-						p = new Point3f(iX+1, iY, iZ); // front bottom right
-						verts.add(p);
-						p = new Point3f(iX, iY, iZ); // front bottom left
-						verts.add(p);
-						p = new Point3f(iX, iY+1, iZ); // front top left
-						verts.add(p);
-						p = new Point3f(iX+1, iY, iZ+1); // back bottom right
-						verts.add(p);
-						p = new Point3f(iX+1, iY+1, iZ+1); // back top right
-						verts.add(p);
-						p = new Point3f(iX, iY+1, iZ+1); // back top left
-						verts.add(p);
-						p = new Point3f(iX, iY, iZ+1); // back bottom left
-						verts.add(p);
+				float terraX = blockX + iX;
+				float terraZ = blockZ + iZ;
+				float terraY = func.get(terraX, terraZ);
+				float roundedY = round(terraY);
+				float surfaceY = height(roundedY);
+				checkLowHigh((byte)surfaceY);
+				byte cnt = 0;
+				for (byte iY = (byte) (dim-1); iY >= 0; iY--) {
+					boolean dense = isDense(surfaceY, iY);
+					if (dense) {
+						if (cnt == 0) { // first (topmost) cube, create it
+							i = addCube(iX, iY, iZ, i, vrt, cls, idx);
+						} else {
+							// check neighbours
+							float tYr = func.get(terraX+1, terraZ);
+							tYr = round(tYr);
+							tYr = height(tYr);
+							boolean denseR = isDense(tYr, iY);
+							float tYl = func.get(terraX-1, terraZ);
+							tYl = round(tYl);
+							tYl = height(tYl);
+							boolean denseL = isDense(tYl, iY);
+							float tYf = func.get(terraX, terraZ-1);
+							tYf = round(tYf);
+							tYf = height(tYf);
+							boolean denseF = isDense(tYf, iY);
+							float tYb = func.get(terraX, terraZ+1);
+							tYb = round(tYb);
+							tYb = height(tYb);
+							boolean denseB = isDense(tYb, iY);
+							if (denseR == false || denseL == false || denseF == false || denseB == false) {
+								// one of the neighbours is missing, add another cube
+								i = addCube(iX, iY, iZ, i, vrt, cls, idx);
+							}
+						}
+						cnt++;
 					}
-					data[iX][iY][iZ] = t; // block types: 0-air, 1-earth
 				}
 			}
 		}
-		vertexCount = verts.size();
-//		log("[" + blockX + "," + blockY + "," + blockZ + "] faces=" + faceCount + " l=" + lowest + " h=" + highest);
+	}
+	
+	public void generate() {
+		if (vertices != null) {
+			log("block " + blockX + ", " + blockY + ", " + blockZ + " already has data");
+			return;
+		}
+//		long start = Sys.getTime();
+		vertices = new ArrayList<Point3f>();
+		colors = new ArrayList<Integer>();
+		indices = new ArrayList<Short>();
+//		log("generating block @ " + blockX + ", " + blockY + ", " + blockZ);
+		indexVertices(vertices, colors, indices);
+//		long dur = Sys.getTime() - start;
+//		log("generate duration: " + dur);
+		if (vertices.size() != colors.size()) {
+			log("whoops! vertex & color counts dont match!");
+		}
+		vertexCount = vertices.size();
+		if ((indices.size() % 4) != 0) {
+			log("whoops! not enough indices for quads!");
+		}
+		faceCount = indices.size() / 4;
+//		log("[" + blockX + "," + blockY + "," + blockZ + "] faces=" + faceCount +
+//				" vertices=" + vertexCount + " l=" + lowest + " h=" + highest);
 //		if (lowest >= highest) {
 //			log("flat block: low=" + lowest + "; high=" + highest);
 //		}
-		assert lowest == highest : "flat block";
-	}
-	
-	protected byte[][][] getData() {
-		return data;
+//		assert lowest == highest : "flat block";
 	}
 	
 	public int getFaceCount() {
@@ -199,13 +327,6 @@ public class Block {
 		logGlErrorIfAny();
 //		vertexBytes = faceCount * VERTEXBYTES_PER_FACE;
 //		colorBytes = faceCount * COLORBYTES_PER_FACE;
-		List<Point3f> vertices = new ArrayList<Point3f>();
-		List<Integer> colors = new ArrayList<Integer>();
-		List<Short> indices = new ArrayList<Short>();
-		indexVertices(vertices, colors, indices);
-		if (vertices.size() != colors.size()) {
-			log("whoops! vertices & colors counts dont match!");
-		}
 		vertexBytes = vertices.size() * BYTES_PER_VERTEX;
 		colorBytes = colors.size() * BYTES_PER_COLOR;
 		indexBytes = indices.size() * BYTES_PER_SHORT;
@@ -239,133 +360,9 @@ public class Block {
 		// unbind - only one active array buffer at a time 
 		ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, 0);
 		logGlErrorIfAny();
-	}
-	
-	protected int addVertexAndColor(Point3f p, Short i, List<Point3f> vrt, List<Integer> cls, byte h) {
-		vrt.add(p);
-		// add color to vertex
-		byte d = (byte) (getDim() * 5);
-		byte m = (byte) (128 / d);
-		byte i2 = (byte) (32 + m + (m * h));
-		Integer c = 0; // r
-		c |= (i2 << 8); // g
-		c |= (0x00 << 16); // b
-		c |= (Byte.MAX_VALUE << 24); // a
-//		Integer c = 0xFF | (0xFF << 8) | (0xFF << 16) | (0xFF << 24); // rgba
-//		log("c=" + Integer.toHexString(c));
-		cls.add(c);
-		return i;
-	}
-	
-	protected void indexVertices(List<Point3f> vrt, List<Integer> cls, List<Short> idx) {
-		final int dim = getDim();
-		IFunc2D func = terra.getFunc();
-		short i = 0;
-		for (int iX = 0; iX < dim; iX++) {
-			for (int iZ = 0; iZ < dim; iZ++) {
-				float terraX = blockX + iX;
-				float terraZ = blockZ + iZ;
-				float terraY = func.get(terraX, terraZ);
-				float roundedY = round(terraY);
-				float surfaceY = height(roundedY);
-				byte h = (byte) terraY;
-				for (int iY = 0; iY < dim; iY++) {
-					boolean solid = (surfaceY > iY) ? true : false;
-					if (solid) {
-						// top face
-						Point3f p = new Point3f(iX+1, iY+1, iZ+1); // top right back
-						int i0 = vrt.indexOf(p);
-						if (i0 == -1) { // new point
-							i0 = addVertexAndColor(p, new Short(i), vrt, cls, h);
-							i++;
-						} // else got index of existing point
-						idx.add((short)i0);
-						p = new Point3f(iX+1, iY+1, iZ); // top right front
-						int i1 = vrt.indexOf(p);
-						if (i1 == -1) {
-							i1 = addVertexAndColor(p, new Short(i), vrt, cls, h);
-							i++;
-						}
-						idx.add((short)i1);
-						p = new Point3f(iX, iY+1, iZ); // top left front
-						int i2 = vrt.indexOf(p);
-						if (i2 == -1) {
-							i2 = addVertexAndColor(p, new Short(i), vrt, cls, h);
-							i++;
-						}
-						idx.add((short)i2);
-						p = new Point3f(iX, iY+1, iZ+1); // top left back
-						int i3 = vrt.indexOf(p);
-						if (i3 == -1) {
-							i3 = addVertexAndColor(p, new Short(i), vrt, cls, h);
-							i++;
-						}
-						idx.add((short)i3);
-						// front face
-//						p = new Point3f(iX+1, iY+1, iZ); // top right front
-//						i2 = vrt.get(p);
-//						if (i2 == null) {
-//							i2 = addVertexAndColor(p, new Short(i), vrt, cls);
-//							i++;
-//						}
-						idx.add((short)i1);
-						p = new Point3f(iX+1, iY, iZ); // bottom right front
-						int i5 = vrt.indexOf(p);
-						if (i5 == -1) {
-							i5 = addVertexAndColor(p, new Short(i), vrt, cls, h);
-							i++;
-						}
-						idx.add((short)i5);
-						p = new Point3f(iX, iY, iZ); // bottom left front
-						int i6 = vrt.indexOf(p);
-						if (i6 == -1) {
-							i6 = addVertexAndColor(p, new Short(i), vrt, cls, h);
-							i++;
-						}
-						idx.add((short)i6);
-//						p = new Point3f(iX, iY+1, iZ); // top left front
-//						Short i2 = vrt.get(p);
-//						if (i2 == null) {
-//							i2 = addVertexAndColor(p, new Short(i), vrt, cls);
-//							i++;
-//						}
-						idx.add((short)i2);
-						// right face
-						idx.add((short)i0);
-						p = new Point3f(iX+1, iY, iZ+1); // bottom right back
-						int i4 = vrt.indexOf(p);
-						if (i4 == -1) {
-							i4 = addVertexAndColor(p, new Short(i), vrt, cls, h);
-							i++;
-						}
-						idx.add((short)i4);
-						idx.add((short)i5);
-						idx.add((short)i1);
-						// left face
-						idx.add((short)i2);
-						idx.add((short)i6);
-						p = new Point3f(iX, iY, iZ+1); // bottom left back
-						int i7 = vrt.indexOf(p);
-						if (i7 == -1) {
-							i7 = addVertexAndColor(p, new Short(i), vrt, cls, h);
-							i++;
-						}
-						idx.add((short)i7);
-						idx.add((short)i3);
-						// back face
-						idx.add((short)i3);
-						idx.add((short)i7);
-						idx.add((short)i4);
-						idx.add((short)i0);
-						// bottom face
-						idx.add((short)i5);
-						idx.add((short)i4);
-						idx.add((short)i7);
-						idx.add((short)i6);
-					}
-				}
-			}
-		}
+		indices = null;
+		colors = null;
+		vertices = null;
 	}
 	
 	private void fillVBO(ByteBuffer b, List<Point3f> vrt, List<Integer> cls, List<Short> idx) {
@@ -397,7 +394,7 @@ public class Block {
 	}
 	
 	public void draw() {
-		if (/*faceCount <= 0 ||*/ vxBufId == 0 || vertexCount <= 0) {
+		if (faceCount <= 0 || vxBufId == 0 || vertexCount <= 0) {
 			return;
 		}
 //		long start = System.currentTimeMillis();
@@ -495,10 +492,10 @@ public class Block {
 	}
 	
 	public void destroy() {
-		if (data != null) {
-			data = null;
-		}
-//		faceCount = 0;
+		vertices = null;
+		colors = null;
+		indices = null;
+		faceCount = 0;
 		vertexCount = 0;
 	}
 	
