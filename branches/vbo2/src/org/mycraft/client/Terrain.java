@@ -195,7 +195,7 @@ public class Terrain {
 			far = (float) (dim * Math.floor(far / dim));
 			Point3f pt;
 			if (!cpt.equals(lastPoint)) { // moved, start over
-				log("moved, starting over");
+//				log("moved, starting over");
 				delta[0] = 0f;
 				delta[1] = 0f;
 				delta[2] = 0f;
@@ -309,7 +309,7 @@ public class Terrain {
 						stage = 0; // start over
 						radius += dim;
 						if (radius > far) {
-							log("all generated");
+//							log("all generated");
 							return 2; // all done
 						}
 					}
@@ -335,7 +335,7 @@ public class Terrain {
 					synchronized (cacheBlocks) {
 						cacheBlocks.put(p, b);
 					}
-					log("removed block @ " + p.getX() + "x" + p.getY() + "x" + p.getZ());
+//					log("removed block @ " + p.getX() + "x" + p.getY() + "x" + p.getZ());
 //					log("map size " + m.size() + " blocks.");
 					break; // one at a time
 				}
@@ -418,6 +418,7 @@ public class Terrain {
 	public void destroy() {
 		stopCalcer();
 		for (Block b : addBlocks.values()) {
+			b.freeVbo();
 			b.destroy();
 		}
 		for (Block b : renderBlocks.values()) {
