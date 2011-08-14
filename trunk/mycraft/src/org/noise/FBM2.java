@@ -10,7 +10,7 @@ public class FBM2 extends FBM3 implements IFbm2D {
 	
 	@Override
 	public float get(float x, float y) {
-		return super.get(x, y, 0); // easy hack
+		return super.get(x, y, 0f); // easy hack
 	}
 	
 }
