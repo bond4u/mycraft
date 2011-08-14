@@ -55,6 +55,7 @@ public class Camera {
 			ax += 360f;
 		}
 //		log("lookUD " + a + "," + ax);
+		logOrient();
 	}
 	
 	public void lookLeftRight(double a) {
@@ -65,6 +66,11 @@ public class Camera {
 			ay += 360f;
 		}
 //		log("lookLR " + a + "," + ay);
+		logOrient();
+	}
+	
+	protected void logOrient() {
+//		log("camOrient[" + ax + ", " + ay + ", " + az + "]");
 	}
 	
 	/**
@@ -78,6 +84,7 @@ public class Camera {
 		x += dx;
 		z += dz;
 //		log("moveFB " + d + "," + ay + ";" + dx + "," + dz + ";" + x + "," + z);
+		logPos();
 	}
 	
 	public void moveLeftRight(double d) {
@@ -87,12 +94,18 @@ public class Camera {
 		x += dx;
 		z += dz;
 //		log("moveLR " + d + "," + ay + ";" + dx + "," + dz + ";" + x + "," + z);
+		logPos();
 	}
 	
 	public void moveUpDown(double d) {
 		double dy = d * sy;
 		y += dy;
 //		log("moveUD " + d + ";" + dy + ";" + y);
+		logPos();
+	}
+	
+	protected void logPos() {
+//		log("camPos[" + x + ", " + y + ", " + z + "]");
 	}
 	
 	public void update() {

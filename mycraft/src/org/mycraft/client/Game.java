@@ -200,6 +200,10 @@ public class Game extends Thread {
 //			logGlErrorIfAny();
 //			GL11.glEnable(GL11.GL_LIGHTING);
 //			logGlErrorIfAny();
+		GL11.glShadeModel(GL11.GL_SMOOTH);
+		logGlErrorIfAny();
+		GL11.glClearDepth(1.0f);
+		logGlErrorIfAny();
 			GL11.glEnable(GL11.GL_CULL_FACE); // dont render hidden/back faces
 			logGlErrorIfAny();
 			GL11.glDepthFunc(GL11.GL_LEQUAL); // depth test type
@@ -243,7 +247,6 @@ public class Game extends Thread {
 		land = new Terrain(new Random(5432543), viewport, camera);
 		shapes = new ArrayList<Shape>();
 		land.create();
-//		land.init();
 		int baseY = 5;
 		shapes.add(new Shape(texs, 0, baseY, 0));
 		shapes.add(new Shape(texs, 1, baseY, 0));
@@ -418,6 +421,9 @@ public class Game extends Thread {
 		logGlErrorIfAny();
 		
 		cursor.draw();
+		
+		GL11.glFlush();
+		logGlErrorIfAny();
 		
 //		long duration = System.currentTimeMillis() - start;
 //		if (duration > 1000 / 60) {
