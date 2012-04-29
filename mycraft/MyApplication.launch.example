@@ -12,5 +12,5 @@
 </listAttribute>
 <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="org.mycraft.client.MyApplication"/>
 <stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="mycraft"/>
-<stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-Djava.library.path=${workspace_loc}/lwjgl-2.6/native/windows"/>
+<stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-Djava.library.path=${workspace_loc}/lwjgl-src-2.8.3/native/windows"/>
 </launchConfiguration>

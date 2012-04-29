@@ -16,19 +16,9 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>lwjgl-src-gen</name>
+			<name>lwjgl-src-2.8.3</name>
 			<type>2</type>
-			<locationURI>WORKSPACE_LOC/lwjgl-source-2.6/src/generated</locationURI>
-		</link>
-		<link>
-			<name>lwjgl-src-java</name>
-			<type>2</type>
-			<locationURI>WORKSPACE_LOC/lwjgl-source-2.6/src/java</locationURI>
-		</link>
-		<link>
-			<name>lwjgl-src-tmp</name>
-			<type>2</type>
-			<locationURI>WORKSPACE_LOC/lwjgl-source-2.6/src/templates</locationURI>
+			<locationURI>WORKSPACE_LOC/lwjgl-src-2.8.3</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

@@ -1,6 +1,8 @@
 package org.mycraft.client;
 
 import java.awt.Canvas;
+import java.awt.Font;
+import java.io.InputStream;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -15,6 +17,9 @@ import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
+import org.newdawn.slick.Color;
+import org.newdawn.slick.TrueTypeFont;
+import org.newdawn.slick.util.ResourceLoader;
 
 public class Game extends Thread {
 	
@@ -79,6 +84,14 @@ public class Game extends Thread {
 		}
 		Mouse.setGrabbed(true);
 		logGlErrorIfAny();
+//		log("isClipMouse="+Mouse.isClipMouseCoordinatesToWindow());
+//		logGlErrorIfAny();
+//		log("isMouseGrabbed="+Mouse.isGrabbed());
+//		logGlErrorIfAny();
+		Keyboard.enableRepeatEvents(true);
+		logGlErrorIfAny();
+//		log("areKeyboardRepeatEventsEnabled="+Keyboard.areRepeatEventsEnabled());
+//		logGlErrorIfAny();
 	}
 	
 //	public void start() {
@@ -88,10 +101,100 @@ public class Game extends Thread {
 		running = true;
 		initDisplay();
 		initGL();
+		initMenu();
 		initWorld();
 		gameLoop();
 		destroyWorld();
 		destroyDisplay();
+	}
+	
+	private TrueTypeFont menuFont = null;
+	private boolean isMenuActive = false;
+	
+	protected void initMenu() {
+		final boolean antiAlias = true;
+		try {
+			InputStream is = ResourceLoader.getResourceAsStream("org/mycraft/client/Comic_Book.ttf");
+			Font awtFont = Font.createFont(Font.TRUETYPE_FONT, is);
+			awtFont = awtFont.deriveFont(24f);
+			menuFont = new TrueTypeFont(awtFont, antiAlias);
+		} catch (Exception e) {
+			log("initMenu: " + e.getMessage());
+		}
+	}
+	
+	protected void activateMenu(boolean activate) {
+		if (activate && !isMenuActive) {
+			isMenuActive = true;
+			Mouse.setGrabbed(false);
+		} else if (!activate && isMenuActive) {
+			isMenuActive = false;
+			Mouse.setGrabbed(true);
+		}
+	}
+	
+	protected void drawMenu() {
+		if (isMenuActive) {
+			if (null == menuFont) {
+				log("drawMenu: font is not initialized");
+				return;
+			}
+			viewport.proj2d();
+			
+			GL11.glPushMatrix();
+			logGlErrorIfAny(); // +1=1
+			
+			GL11.glTranslatef(0f, 0f, -0.1f);
+			logGlErrorIfAny();
+
+			GL11.glColor3f(0f, 0f, 1f);
+			logGlErrorIfAny();
+			
+			float l1 = 50f;
+			float t1 = 50f;
+			float w = 255f;
+			float h = 24f;
+			float p = 5f;
+			
+			GL11.glBegin(GL11.GL_QUADS);
+			
+			GL11.glVertex2f(l1-p, t1+h);
+			GL11.glVertex2f(l1+w+p, t1+h);
+			GL11.glVertex2f(l1+w+p, t1);
+			GL11.glVertex2f(l1-p, t1);
+			
+			GL11.glEnd();
+			logGlErrorIfAny();
+
+			float l2 = 50f;
+			float t2 = 100f;
+			w = 70f;
+			
+			GL11.glBegin(GL11.GL_QUADS);
+			
+			GL11.glVertex2f(l2-p, t2+h);
+			GL11.glVertex2f(l2+w+p, t2+h);
+			GL11.glVertex2f(l2+w+p, t2);
+			GL11.glVertex2f(l2-p, t2);
+			
+			GL11.glEnd();
+			logGlErrorIfAny();
+
+			GL11.glEnable(GL11.GL_BLEND); // enable transparency
+			logGlErrorIfAny();
+
+			menuFont.drawString(l1, t1, "Menu (game paused)", Color.white);
+			
+			menuFont.drawString(l2, t2, "Quit?", Color.white);
+			
+			GL11.glDisable(GL11.GL_BLEND); // disable transparency
+			logGlErrorIfAny();
+
+			GL11.glPopMatrix();
+			logGlErrorIfAny(); // -1=0
+			
+			viewport.proj3d();
+		}
 	}
 	
 	public void gameLoop() {
@@ -102,6 +205,10 @@ public class Game extends Thread {
 		while(running) {
 			// draw the gears
 			drawWorld();
+			cursor.draw();
+			drawMenu();
+			GL11.glFlush();
+			logGlErrorIfAny();
 			// measure time
 //			long start = System.currentTimeMillis();
 			Display.update();
@@ -124,8 +231,12 @@ public class Game extends Thread {
 			final boolean doClose = Display.isCloseRequested();
 			logGlErrorIfAny();
 			if (doClose) {
-				log("display.closeRequested");
-				running = false;
+				log("display.closeRequested menu=" + isMenuActive);
+				if (!isMenuActive) {
+					activateMenu(!isMenuActive);
+				} else { // do really close when requested 2nd time
+					running = false;
+				}
 			}
 //			long duration = System.currentTimeMillis() - start;
 //			if (duration > 1000 / 60) {
@@ -136,47 +247,56 @@ public class Game extends Thread {
 	}
 	
 	private void pollMouse() {
-		int mdx = Mouse.getDX(); // mouse x is 3d y
-		int mdy = Mouse.getDY(); // mouse y is 3d z
-		if (mdy != 0) {
-			camera.lookUpDown(mdy);
-		}
-		if (mdx != 0) {
-			camera.lookLeftRight(mdx); // mouse goes right, but camera turns right
+		if (!isMenuActive) {
+			int mdx = Mouse.getDX(); // mouse x is 3d y
+			int mdy = Mouse.getDY(); // mouse y is 3d z
+			if (mdy != 0) {
+				camera.lookUpDown(mdy);
+			}
+			if (mdx != 0) {
+				camera.lookLeftRight(mdx); // mouse goes right, but camera turns right
+			}
 		}
 	}
 	
 	private void pollKeyboard() {
-		// F Key Pressed (i.e. released)
-		if (Keyboard.isKeyDown(Keyboard.KEY_F) && !Keyboard.isRepeatEvent()) {
-			logGlErrorIfAny();
-			try {
-				Display.setFullscreen(!Display.isFullscreen());
-			} catch (LWJGLException e) {
-				log("LWJGL.setFullscreen: " + e);
+		if (!isMenuActive) {
+			int forwardBackward = Keyboard.isKeyDown(Keyboard.KEY_W) ? 1 : (Keyboard.isKeyDown(Keyboard.KEY_S) ? -1 : 0);
+			if (0 != forwardBackward) {
+				camera.moveForwardBackward(forwardBackward);
+			}
+			int leftRight = Keyboard.isKeyDown(Keyboard.KEY_A) ? -1 : (Keyboard.isKeyDown(Keyboard.KEY_D) ? 1 : 0);
+			if (0 != leftRight) {
+				camera.moveLeftRight(leftRight);
+			}
+			int upDown = Keyboard.isKeyDown(Keyboard.KEY_SPACE) ? 1 : (Keyboard.isKeyDown(Keyboard.KEY_C) ? -1 : 0);
+			if (0 != upDown) {
+				camera.moveUpDown(upDown);
 			}
 		}
-		int forwardBackward = Keyboard.isKeyDown(Keyboard.KEY_W) ? 1 : (Keyboard.isKeyDown(Keyboard.KEY_S) ? -1 : 0);
-		logGlErrorIfAny();
-		if (forwardBackward != 0) {
-			camera.moveForwardBackward(forwardBackward);
+		while (Keyboard.next()) {
+			logGlErrorIfAny();
+			boolean pressed = Keyboard.getEventKeyState();
+			logGlErrorIfAny();
+			int key = Keyboard.getEventKey();
+			logGlErrorIfAny();
+			if (pressed) {
+			} else {
+				// released
+				if (Keyboard.KEY_F == key) {
+					log("F - switching to fullscreen="+Display.isFullscreen());
+					try {
+						Display.setFullscreen(!Display.isFullscreen());
+					} catch (LWJGLException e) {
+						log("LWJGL.setFullscreen: " + e);
+					}
+				} else if (Keyboard.KEY_ESCAPE == key) {
+					log("escape pressed - menu="+isMenuActive);
+					activateMenu(!isMenuActive);
+				}
+			}
 		}
-		int leftRight = Keyboard.isKeyDown(Keyboard.KEY_A) ? -1 : (Keyboard.isKeyDown(Keyboard.KEY_D) ? 1 : 0);
 		logGlErrorIfAny();
-		if (leftRight != 0) {
-			camera.moveLeftRight(leftRight);
-		}
-		int upDown = Keyboard.isKeyDown(Keyboard.KEY_SPACE) ? 1 : (Keyboard.isKeyDown(Keyboard.KEY_C) ? -1 : 0);
-		logGlErrorIfAny();
-		if (upDown != 0) {
-			camera.moveUpDown(upDown);
-		}
-		boolean esc = Keyboard.isKeyDown(Keyboard.KEY_ESCAPE);
-		logGlErrorIfAny();
-		if (esc) {
-			log("escape pressed - stop running");
-			running = false;
-		}
 	}
 	
 	public void log(String s) {
@@ -195,46 +315,46 @@ public class Game extends Thread {
 	}
 	
 	protected void initGL() {
-			// setup ogl
-//			GL11.glEnable(GL11.GL_LIGHT0);
-//			logGlErrorIfAny();
-//			GL11.glEnable(GL11.GL_LIGHTING);
-//			logGlErrorIfAny();
+		// setup ogl
+//		GL11.glEnable(GL11.GL_LIGHTING);
+//		logGlErrorIfAny();
+//		GL11.glEnable(GL11.GL_LIGHT0);
+//		logGlErrorIfAny();
 		GL11.glShadeModel(GL11.GL_SMOOTH);
 		logGlErrorIfAny();
 		GL11.glClearDepth(1.0f);
 		logGlErrorIfAny();
-			GL11.glEnable(GL11.GL_CULL_FACE); // dont render hidden/back faces
-			logGlErrorIfAny();
-			GL11.glDepthFunc(GL11.GL_LEQUAL); // depth test type
-			logGlErrorIfAny();
-			GL11.glEnable(GL11.GL_DEPTH_TEST);
-			logGlErrorIfAny();
-			GL11.glEnable(GL11.GL_TEXTURE_2D);
-			logGlErrorIfAny();
+		GL11.glEnable(GL11.GL_CULL_FACE); // dont render hidden/back faces
+		logGlErrorIfAny();
+		GL11.glDepthFunc(GL11.GL_LEQUAL); // depth test type
+		logGlErrorIfAny();
+		GL11.glEnable(GL11.GL_DEPTH_TEST);
+		logGlErrorIfAny();
+		GL11.glEnable(GL11.GL_TEXTURE_2D);
+		logGlErrorIfAny();
 //			glEnable(GL_COLOR_MATERIAL);
-//			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA); // avg colors together
-//			logGlErrorIfAny();
-//			GL11.glEnable(GL11.GL_BLEND); // enable transparency
-//			logGlErrorIfAny();
+		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA); // avg colors together
+		logGlErrorIfAny();
+//		GL11.glEnable(GL11.GL_BLEND); // enable transparency
+//		logGlErrorIfAny();
 //			glEnable(GL_NORMALIZE); // forces normals to size of 1
 //			GL11.glAlphaFunc(GL11.GL_GREATER, 0f);
 //			logGlErrorIfAny();
-//			GL11.glEnable(GL11.GL_ALPHA_TEST); // enable transparency in textures
-//			logGlErrorIfAny();
-			GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
-			logGlErrorIfAny();
+//		GL11.glEnable(GL11.GL_ALPHA_TEST); // enable transparency in textures
+//		logGlErrorIfAny();
+		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
+		logGlErrorIfAny();
 			
-			viewport.init();
+		viewport.init();
 			
-			cursor = new Cursor(/*viewport*/);
+		cursor = new Cursor(/*viewport*/);
 			
-			camera = new Camera();
+		camera = new Camera();
 			
-			GL11.glLoadIdentity();
-			logGlErrorIfAny();
+		GL11.glLoadIdentity();
+		logGlErrorIfAny();
 
-			camera.update();
+		camera.update();
 	}
 	
 	private void destroyDisplay() {
@@ -419,12 +539,7 @@ public class Game extends Thread {
 		
 		GL11.glPopMatrix(); // -1=0
 		logGlErrorIfAny();
-		
-		cursor.draw();
-		
-		GL11.glFlush();
-		logGlErrorIfAny();
-		
+				
 //		long duration = System.currentTimeMillis() - start;
 //		if (duration > 1000 / 60) {
 //			log("drawWorld " + duration + "ms");

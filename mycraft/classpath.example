@@ -2,15 +2,14 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="res"/>
-	<classpathentry kind="src" path="lwjgl-src-java"/>
-	<classpathentry kind="src" path="lwjgl-src-gen"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
-	<classpathentry kind="lib" path="/Users/bond/Projects/lwjgl/lwjgl-2.6/jar/lwjgl_util.jar"/>
-	<classpathentry kind="lib" path="/Users/bond/Projects/lwjgl/lwjgl-2.6/jar/lwjgl_test.jar"/>
-	<classpathentry kind="lib" path="/Users/bond/Projects/lwjgl/lwjgl-2.6/jar/lwjgl_util_applet.jar"/>
-	<classpathentry kind="lib" path="/Users/bond/Projects/lwjgl/lwjgl-2.6/jar/lwjgl-debug.jar"/>
-	<classpathentry kind="lib" path="/Users/bond/Projects/lwjgl/lwjgl-2.6/jar/AppleJavaExtensions.jar"/>
-	<classpathentry kind="lib" path="/Users/bond/Projects/lwjgl/lwjgl-2.6/jar/jinput.jar"/>
-	<classpathentry kind="lib" path="/Users/bond/Projects/lwjgl/lwjgl-2.6/jar/lzma.jar"/>
+	<classpathentry kind="src" path="lwjgl-src-2.8.3/src/generated"/>
+	<classpathentry kind="src" path="lwjgl-src-2.8.3/src/java"/>
+	<classpathentry kind="src" path="test"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/slick-util.jar"/>
+	<classpathentry kind="lib" path="lwjgl-src-2.8.3/jar/jinput.jar"/>
+	<classpathentry kind="lib" path="lwjgl-src-2.8.3/jar/AppleJavaExtensions.jar"/>
+	<classpathentry kind="lib" path="lwjgl-src-2.8.3/jar/asm-debug-all.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
