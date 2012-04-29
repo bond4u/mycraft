@@ -66,6 +66,11 @@ public class Viewport {
 		GL11.glGetInteger(GL11.GL_VIEWPORT, viewport);
 		logGlErrorIfAny();
 		
+		log("window W:H ratio " + (getWidth() / (double) getHeight()));
+		proj3d();
+	}
+	
+	public void proj3d() {
 		GL11.glMatrixMode(GL11.GL_PROJECTION);
 		logGlErrorIfAny();
 		
@@ -91,8 +96,21 @@ public class Viewport {
 		}
 		
 		double r = getWidth() / (double) getHeight();
-		log("window W:H ratio " + r);
 		GLU.gluPerspective(fovy, (float) r, zNear, zFar);
+		logGlErrorIfAny();
+		
+		GL11.glMatrixMode(GL11.GL_MODELVIEW);
+		logGlErrorIfAny();
+	}
+
+	public void proj2d() {
+		GL11.glMatrixMode(GL11.GL_PROJECTION);
+		logGlErrorIfAny();
+		
+		GL11.glLoadIdentity();
+		logGlErrorIfAny();
+		
+		GL11.glOrtho(0f, WIDTH, HEIGHT, 0f, zNear, zFar);
 		logGlErrorIfAny();
 		
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);

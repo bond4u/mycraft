@@ -13,6 +13,7 @@ public class Cursor {
 		logGlErrorIfAny();
 		
 		float d = 0.00075f;
+		float t = 0.00015f;
 		
 		GL11.glColor3f(1f, 1f, 1f); // too thin line
 		logGlErrorIfAny();
@@ -23,6 +24,9 @@ public class Cursor {
 		GL11.glVertex2f(-d, 0f);
 		GL11.glVertex2f(0f, d);
 		GL11.glVertex2f(d, 0f);
+		GL11.glVertex2f(d+t, 0f); //
+		GL11.glVertex2f(0f, d+t);
+		GL11.glVertex2f(-d-t, 0f);
 		
 		GL11.glEnd();
 		logGlErrorIfAny();
@@ -35,6 +39,9 @@ public class Cursor {
 		GL11.glVertex2f(-d, 0f);
 		GL11.glVertex2f(0f, -d);
 		GL11.glVertex2f(d, 0f);
+		GL11.glVertex2f(d+t, 0f); //
+		GL11.glVertex2f(0f, -d-t);
+		GL11.glVertex2f(-d-t, 0f);
 		
 		GL11.glEnd();
 		logGlErrorIfAny();
