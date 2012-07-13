@@ -14,7 +14,4 @@ Add your javscript here.  Format your javascript with:
 
 <div id="jstest"></div>
 
-<script type="text/javascript">
-var el = document.getElementById("jstest");
-el.innerHtml = "jsTest";
-</script>
+<script type="text/javascript" src="test.js" />
