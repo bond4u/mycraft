@@ -11,3 +11,10 @@ Add your javscript here.  Format your javascript with:
   * Text in *bold* or _italic_
   * Headings, paragraphs, and lists
   * Automatic links to other wiki pages
+
+<div id="jstest"></div>
+
+<script type="text/javascript">
+var el = document.getElementById("jstest");
+el.innerHtml = "jsTest";
+</script>
