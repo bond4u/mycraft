@@ -12,6 +12,4 @@ Add your javscript here.  Format your javascript with:
   * Headings, paragraphs, and lists
   * Automatic links to other wiki pages
 
-<div id="jstest"></div>
-
-<script type="text/javascript" src="test.js" />
+<div id="jstest">TODO: animation here</div>
