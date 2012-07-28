@@ -14,4 +14,6 @@ Various links found on the net:
   * http://codeflow.org/entries/2010/dec/09/minecraft-like-rendering-experiments-in-opengl-4/
   * http://www.sea-of-memes.com/
   * http://freespace.virgin.net/hugo.elias/models/m_perlin.htm
+  * http://vterrain.org/Elevation/Artificial/
+  * http://pcg.wikidot.com/category-pcg-algorithms
   * 
