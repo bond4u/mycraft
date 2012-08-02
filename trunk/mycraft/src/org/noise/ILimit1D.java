@@ -2,8 +2,15 @@ package org.noise;
 
 public interface ILimit1D extends IFunc1D {
 	
-	void setAbove(float x1, float x2);
+	enum Condition {
+		ABOVE,
+		ABOVE_OR_EQUAL,
+		BELOW,
+		BELOW_OR_EQUAL;
+	}
 	
-	void setBelow(float x1, float x2);
+	void set(Condition c1, float x1, float x2);
+	
+	float get(float x);
 	
 }

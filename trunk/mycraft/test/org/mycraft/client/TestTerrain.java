@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.lwjgl.opengl.SharedDrawable;
-import org.noise.IFunc2D;
+import org.noise.Ground;
 import org.noise.TestGround;
 
 public class TestTerrain extends Terrain {
@@ -17,7 +17,7 @@ public class TestTerrain extends Terrain {
 	}
 	
 	// override ground
-	protected IFunc2D createFunc(Random r) {
+	protected Ground createGenerator(Random r) {
 		return new TestGround(r);
 	}
 	
@@ -33,7 +33,7 @@ public class TestTerrain extends Terrain {
 	
 	// override blocks creation
 	public void create() {
-		resetLowHigh();
+//		resetLowHigh();
 		// just create 2 neighboring blocks
 		final short blkDim = Block.getDim();
 		float x1 = 0f;
@@ -42,14 +42,14 @@ public class TestTerrain extends Terrain {
 		Point3f p1 = new Point3f(x1, y1, z1);
 		Block b1 = createBlock(x1, y1, z1);
 		blocks.put(p1, b1);
-		checkLowHigh(b1.lowest(), b1.highest());
+//		checkLowHigh(b1.lowest(), b1.highest());
 		float x2 = -blkDim;
 		float y2 = 0;
 		float z2 = 0;
 		Point3f p2 = new Point3f(x2, y2, z2);
 		Block b2 = createBlock(x2, y2, z2);
 		blocks.put(p2, b2);
-		checkLowHigh(b2.lowest(), b2.highest());
+//		checkLowHigh(b2.lowest(), b2.highest());
 	}
 	
 	protected Block createBlock(float x, float y, float z) {

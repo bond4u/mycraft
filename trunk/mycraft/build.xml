@@ -4,7 +4,7 @@
 	<property name="dir.src" value="src" />
 	<property name="dir.classes" value="classes" />
 	<property name="dir.build.classes" value="${dir.build}/${dir.classes}" />
-	<property name="dir.lwjgl" value="../lwjgl-2.7.1" />
+	<property name="dir.lwjgl" value="../lwjgl-src-2.8.3" />
 	<property name="dir.lwjgl.jar" value="${dir.lwjgl}/jar" />
 	<property name="lib.lwjgl" value="${dir.lwjgl.jar}/lwjgl-debug.jar" />
 	<property name="lib.lwjgl-util" value="${dir.lwjgl.jar}/lwjgl_util.jar" />

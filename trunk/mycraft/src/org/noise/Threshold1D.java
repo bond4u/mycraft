@@ -6,26 +6,29 @@ package org.noise;
  */
 public class Threshold1D implements ILimit1D {
 	
-	private float above;
-	private float upper;
-	private float below;
-	private float lower;
+	private Condition cond;
+	private float lim;
+	private float val;
 	
 	@Override
-	public void setAbove(float x1, float x2) {
-		above = x1;
-		upper = x2;
-	}
-
-	@Override
-	public void setBelow(float x1, float x2) {
-		below = x1;
-		lower = x2;
+	public void set(Condition c1, float x1, float x2) {
+		cond = c1;
+		lim = x1;
+		val = x2;
 	}
 	
 	@Override
 	public float get(float x) {
-		float x2 = (x > above) ? upper : ((x < below) ? lower : x);
+		float x2 = x;
+		if (Condition.ABOVE == cond && x > lim) {
+			x2 = val;
+		} else if (Condition.ABOVE_OR_EQUAL == cond && x >= lim) {
+			x2 = val;
+		} else if (Condition.BELOW == cond && x < lim) {
+			x2 = val;
+		} else if (Condition.BELOW_OR_EQUAL == cond && x <= lim) {
+			x2 = val;
+		}
 		return x2;
 	}
 	
