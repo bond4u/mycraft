@@ -168,7 +168,7 @@ public class Game extends Thread {
 
 			float l2 = 50f;
 			float t2 = 100f;
-			w = 70f;
+			w = 100f;
 			
 			GL11.glBegin(GL11.GL_QUADS);
 			
@@ -183,9 +183,9 @@ public class Game extends Thread {
 			GL11.glEnable(GL11.GL_BLEND); // enable transparency
 			logGlErrorIfAny();
 
-			menuFont.drawString(l1, t1, "Menu (game paused)", Color.white);
+			menuFont.drawString(l1, t1, "Esc - Pause/Resume", Color.white);
 			
-			menuFont.drawString(l2, t2, "Quit?", Color.white);
+			menuFont.drawString(l2, t2, "Q - Quit", Color.white);
 			
 			GL11.glDisable(GL11.GL_BLEND); // disable transparency
 			logGlErrorIfAny();
@@ -290,8 +290,13 @@ public class Game extends Thread {
 					} catch (LWJGLException e) {
 						log("LWJGL.setFullscreen: " + e);
 					}
+				} else if (Keyboard.KEY_Q == key) {
+					if (isMenuActive) {
+						running = false;
+						log("Q - running=false");
+					}
 				} else if (Keyboard.KEY_ESCAPE == key) {
-					log("escape pressed - menu="+isMenuActive);
+					log("ESC pressed - menu="+isMenuActive);
 					activateMenu(!isMenuActive);
 				}
 			}
@@ -386,7 +391,8 @@ public class Game extends Thread {
 		shapes.add(new Shape(texs, -1, baseY+1, -1));
 	}
 	
-	protected void logBuf(FloatBuffer fb, String s) {
+	// logs contents of FloagBuffer
+/*	protected void logBuf(FloatBuffer fb, String s) {
 		String z = s;
 		while (fb.remaining() > 0) {
 			z += " ";
@@ -394,7 +400,7 @@ public class Game extends Thread {
 		}
 		fb.rewind();
 		log(z);
-	}
+	}*/
 	
 	private void drawWorld() {
 //		long start = System.currentTimeMillis();
@@ -419,7 +425,7 @@ public class Game extends Thread {
 		
 		FloatBuffer white = BufferUtils.createFloatBuffer(4).put(new float[] { 1f, 1f, 1f, 1f, });
 		white.flip();
-		GL11.glMaterial(GL11.GL_FRONT_AND_BACK, GL11.GL_AMBIENT_AND_DIFFUSE, white);
+		GL11.glMaterial(GL11.GL_FRONT/*_AND_BACK*/, GL11.GL_AMBIENT_AND_DIFFUSE, white);
 //		long start2 = System.currentTimeMillis();
 		for (Shape s : shapes) {
 			s.draw();
@@ -453,8 +459,11 @@ public class Game extends Thread {
 		GL11.glReadPixels(wx, wy, 1, 1, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, px);
 		logGlErrorIfAny();
 		if (px.get(0) <= 0.98f) {
-			// projection matrix = 1.0464569 0 0 0; 0 1.5696855 0 0;
-			// 0 0 -1.0021052 -1.0; 0 0 0.20021053 0
+			// projection matrix:
+			// 1.0464569 0 0 0
+			// 0 1.5696855 0 0
+			// 0 0 -1.0021052 -1.0
+			// 0 0 0.20021053 0
 			FloatBuffer pm = BufferUtils.createFloatBuffer(4*4);
 			GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, pm);
 			logGlErrorIfAny();

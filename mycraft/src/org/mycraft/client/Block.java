@@ -9,6 +9,7 @@ import org.lwjgl.opengl.ARBBufferObject;
 import org.lwjgl.opengl.ARBVertexBufferObject;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
+import org.noise.Ground;
 import org.noise.IFunc2D;
 
 public class Block {
@@ -40,8 +41,8 @@ public class Block {
 	private int faceCount = 0;
 	private int vertexCount = 0;
 	private int vxBufId = 0;
-	private byte lowest;
-	private byte highest;
+//	private byte lowest;
+//	private byte highest;
 	
 	private int vertexBytes;
 	private int colorBytes;
@@ -71,26 +72,26 @@ public class Block {
 		return blockZ;
 	}
 	
-	protected float round(float f) {
-		float r = (f >= 0f) ? f + 0.49999999f : f - 0.49999999f;
-		double d = (r >= 0f) ? Math.floor(r) : Math.ceil(r);
-		return (float) d;
-	}
+//	protected float round(float f) {
+//		float r = (f >= 0f) ? f + 0.49999999f : f - 0.49999999f;
+//		double d = (r >= 0f) ? Math.floor(r) : Math.ceil(r);
+//		return (float) d;
+//	}
 	
 	// height - it may too low for this block; or too high; slice it into range [0..dim]
-	protected float height(float tY) {
+//	protected float height(float tY) {
 		// 0 & 10-5 = 0 & 5 = 5
 		// 0 & 10--5 = 0 & 15 = 15
 		// 0 & -10-5 = 0 & -15 = 0
 		// 0 & -10--5 = 0 & -5 = 0
-		float low = Math.max(0f, tY - blockY); // 0 or higher
+//		float low = Math.max(0f, tY - blockY); // 0 or higher
 		// 5 & 5 = 5
 		// 5 & 15 = 5
 		// 5 & 0 = 0
 		// 5 & 0 = 0
-		float high = Math.min(getDim(), low); // dim or lower
-		return high;
-	}
+//		float high = Math.min(getDim(), low); // dim or lower
+//		return high;
+//	}
 	
 	protected int addVertexAndColor(Point3f p, Short i, List<Point3f> vrt, List<Integer> cls, float h) {
 		vrt.add(p);
@@ -205,48 +206,70 @@ public class Block {
 	}
 	
 	protected void indexVertices(List<Point3f> vrt, List<Integer> cls, List<Short> idx) {
-		resetLowHigh();
+//		resetLowHigh();
 		final int dim = getDim();
-		IFunc2D func = terra.getFunc();
+//		IFunc2D func = terra.getFunc();
+		Ground gen = terra.getGenerator();
 		short i = 0;
 		for (byte iX = 0; iX < dim; iX++) {
+			float terraX = blockX + iX;
 			for (byte iZ = 0; iZ < dim; iZ++) {
-				float terraX = blockX + iX;
 				float terraZ = blockZ + iZ;
-				float terraY = func.get(terraX, terraZ);
-				float roundedY = round(terraY);
-				float surfaceY = height(roundedY);
-				checkLowHigh((byte)surfaceY);
-				byte cnt = 0;
+				// TODO get() below should return cube type
+				// or voxel aka height from some point
+				// point 0,0,0 w/ height 3 and point 0,5,0 w/ height 2
+				// so that there is hole at point 0,3,0 w/ height 2
+//				float terraY = func.get(terraX, terraZ);
+//				float roundedY = round(terraY);
+//				float surfaceY = height(roundedY);
+//				checkLowHigh((byte)surfaceY);
+//				byte cnt = 0;
 				for (byte iY = (byte) (dim-1); iY >= 0; iY--) {
-					boolean dense = isDense(surfaceY, iY);
+					float terraY = blockY + iY;
+					BlockType bt = gen.get(terraX, terraY, terraZ);
+//					boolean dense = isDense(surfaceY, iY);
+					boolean dense = bt.isDense();
 					if (dense) {
-						if (cnt == 0) { // first (topmost) cube, create it
-							i = addCube(iX, iY, iZ, i, vrt, cls, idx);
-						} else {
+//						if (cnt == 0) { // first (topmost) cube, create it
+//							i = addCube(iX, iY, iZ, i, vrt, cls, idx);
+//						} else {
 							// check neighbours
-							float tYr = func.get(terraX+1, terraZ);
-							tYr = round(tYr);
-							tYr = height(tYr);
-							boolean denseR = isDense(tYr, iY);
-							float tYl = func.get(terraX-1, terraZ);
-							tYl = round(tYl);
-							tYl = height(tYl);
-							boolean denseL = isDense(tYl, iY);
-							float tYf = func.get(terraX, terraZ-1);
-							tYf = round(tYf);
-							tYf = height(tYf);
-							boolean denseF = isDense(tYf, iY);
-							float tYb = func.get(terraX, terraZ+1);
-							tYb = round(tYb);
-							tYb = height(tYb);
-							boolean denseB = isDense(tYb, iY);
-							if (denseR == false || denseL == false || denseF == false || denseB == false) {
+//							float tYr = func.get(terraX+1, terraZ);
+						BlockType btr = gen.get(terraX+1, terraY, terraZ);
+//							tYr = round(tYr);
+//							tYr = height(tYr);
+//							boolean denseR = isDense(tYr, iY);
+						boolean denseR = btr.isDense();
+//							float tYl = func.get(terraX-1, terraZ);
+						BlockType btl = gen.get(terraX-1, terraY, terraZ);
+//							tYl = round(tYl);
+//							tYl = height(tYl);
+//							boolean denseL = isDense(tYl, iY);
+						boolean denseL = btl.isDense();
+//							float tYf = func.get(terraX, terraZ-1);
+						BlockType btf = gen.get(terraX, terraY, terraZ-1);
+//							tYf = round(tYf);
+//							tYf = height(tYf);
+//							boolean denseF = isDense(tYf, iY);
+						boolean denseF = btf.isDense();
+//							float tYb = func.get(terraX, terraZ+1);
+						BlockType btb = gen.get(terraX, terraY, terraZ+1);
+//							tYb = round(tYb);
+//							tYb = height(tYb);
+//							boolean denseB = isDense(tYb, iY);
+						boolean denseB = btb.isDense();
+						BlockType btt = gen.get(terraX, terraY+1, terraZ);
+						boolean denseT = btt.isDense();
+						BlockType bto = gen.get(terraX, terraY-1, terraZ);
+						boolean denseO = bto.isDense();
+							if (denseR == false || denseL == false ||
+									denseF == false || denseB == false ||
+									denseT == false || denseO == false) {
 								// one of the neighbours is missing, add another cube
 								i = addCube(iX, iY, iZ, i, vrt, cls, idx);
 							}
-						}
-						cnt++;
+//						}
+//						cnt++;
 					}
 				}
 			}
@@ -290,27 +313,27 @@ public class Block {
 		return vertexCount;
 	}
 	
-	protected void resetLowHigh() {
-		lowest = Byte.MAX_VALUE;
-		highest = Byte.MIN_VALUE;
-	}
+//	protected void resetLowHigh() {
+//		lowest = Byte.MAX_VALUE;
+//		highest = Byte.MIN_VALUE;
+//	}
 	
-	protected void checkLowHigh(byte h) {
-		if (h < lowest) {
-			lowest = h;
-		}
-		if (h > highest) {
-			highest = h;
-		}
-	}
+//	protected void checkLowHigh(byte h) {
+//		if (h < lowest) {
+//			lowest = h;
+//		}
+//		if (h > highest) {
+//			highest = h;
+//		}
+//	}
 	
-	public float lowest() {
-		return lowest;
-	}
+//	public float lowest() {
+//		return lowest;
+//	}
 	
-	public float highest() {
-		return highest;
-	}
+//	public float highest() {
+//		return highest;
+//	}
 	
 	public int getVboId() {
 		return vxBufId;

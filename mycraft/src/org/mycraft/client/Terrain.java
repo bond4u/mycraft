@@ -16,21 +16,24 @@ import org.noise.IFunc2D;
 
 public class Terrain {
 	
-	private final IFunc2D func;
+	private final Ground generator;
 	private final Comparator<Point3f> comp;
 	private final Map<Point3f, Block> addBlocks; // newly created blocks
  	private final Map<Point3f, Block> renderBlocks; // currently being rendered 
 	private final Map<Point3f, Block> cacheBlocks; // removed from rendering, may be re-used
 	private final List<Block> removeBlocks;
 	private final Thread thread; // terrain calc thread
+
+//	private float lowestH = Float.MAX_VALUE;
+//	private float highestH = Float.MIN_VALUE;
 	
-	private float lowest;
-	private float highest;
+//	private float lowest;
+//	private float highest;
 	
 	private boolean calcing;
 	
 	public Terrain(Random r, Viewport v, Camera c) {
-		func = createFunc(r);
+		generator = createGenerator(r);
 		comp = new Point3f(0f, 0f, 0f);
 		addBlocks = createAddBlocksMap(comp);
 		renderBlocks = createRenderBlocksMap(comp);
@@ -39,7 +42,7 @@ public class Terrain {
 		thread = createCalcer(v, c);
 	}
 	
-	protected IFunc2D createFunc(Random r) {
+	protected Ground createGenerator(Random r) {
 		return new Ground(r);
 	}
 	
@@ -64,12 +67,39 @@ public class Terrain {
 		return l;
 	}
 	
-	protected IFunc2D getFunc() {
-		return func;
+//	protected IFunc2D getFunc() {
+//		return func;
+//	}
+	
+//	protected float round(float f) {
+//		float r = (f >= 0f) ? f + 0.49999999f : f - 0.49999999f;
+//		double d = (r >= 0f) ? Math.floor(r) : Math.ceil(r);
+//		return (float) d;
+//	}
+
+//	protected void checkHeight(float h) {
+//		if (h < lowestH) {
+//			lowestH = h;
+//		}
+//		if (h > highestH) {
+//			highestH = h;
+//		}
+//	}
+
+//	public BlockType get(float x, float y, float z) {
+//		float y2 = func.get(x, z);
+////		checkHeight(y2);
+//		y2 = round(y2);
+//		BlockType bt = (y > y2) ? BlockType.Air : BlockType.Ground;
+//		return bt;
+//	}
+	
+	public Ground getGenerator() {
+		return generator;
 	}
 	
 	public void create() {
-		resetLowHigh();
+//		resetLowHigh();
 		// just screate one block at (0,0)
 		final float startX = 0f;
 		final float startY = 0f;
@@ -80,36 +110,36 @@ public class Terrain {
 		b.initVBO();
 		renderBlocks.put(p, b);
 //		addBlocks.add(b);
-		checkLowHigh(b.lowest(), b.highest());
-		assert lowest == highest : "flat terrain";
+//		checkLowHigh(b.lowest(), b.highest());
+//		assert lowest == highest : "flat terrain";
 		startCalcer();
 	}
 	
-	protected void resetLowHigh() {
-		lowest = Short.MAX_VALUE;
-		highest = Short.MIN_VALUE;
-	}
+//	protected void resetLowHigh() {
+//		lowest = Short.MAX_VALUE;
+//		highest = Short.MIN_VALUE;
+//	}
 	
 	protected Block createBlock(float x, float y, float z) {
 		return new Block(this, x, y, z/*, getFunc()*/);
 	}
 	
-	protected void checkLowHigh(float l, float h) {
-		if (l < lowest) {
-			lowest = l;
-		}
-		if (h > highest) {
-			highest = h;
-		}
-	}
+//	protected void checkLowHigh(float l, float h) {
+//		if (l < lowest) {
+//			lowest = l;
+//		}
+//		if (h > highest) {
+//			highest = h;
+//		}
+//	}
 	
-	public float lowest() {
-		return lowest;
-	}
+//	public float lowest() {
+//		return lowest;
+//	}
 	
-	public float highest() {
-		return highest;
-	}
+//	public float highest() {
+//		return highest;
+//	}
 	
 	protected Thread createCalcer(final Viewport v, final Camera c) {
 		log("creating terrain calcer");
@@ -137,7 +167,7 @@ public class Terrain {
 			// wake up at least once a second (assuming 60fps)
 			try {
 				long sleep = 1000 / (rval == 0 ? 60 : 30);
-				Thread.sleep(sleep); // 1=smallsleep
+				Thread.sleep(sleep); // 0=long sleep, 1=short sleep
 				rval = 0;
 			} catch (InterruptedException e) {
 				log("terrain.calcer sleep interrupted: " + e);
@@ -147,9 +177,9 @@ public class Terrain {
 	}
 	
 	private Point3f lastPoint = null;
-	float[] delta = new float[] { 0f, 0f, 0f, };
-	float radius = Block.getDim();
-	int stage = 0;
+	private float[] delta = new float[] { 0f, 0f, 0f, };
+	private float radius = Block.getDim();
+	private int stage = 0;
 	
 	protected int genBlocks(Camera c, Viewport v) {
 		// track camera ?
@@ -351,7 +381,7 @@ public class Terrain {
 			addBlocks.put(p, b);
 		}
 //		log("added block @ " + p.getX() + "x" + p.getY() + "x" + p.getZ());
-		checkLowHigh(b.lowest(), b.highest());
+//		checkLowHigh(b.lowest(), b.highest());
 //		log("terrain lowest " + lowest + " & highest " + highest);
 //		synchronized (blocks) {
 //			log("map size " + blocks.size() + " blocks.");
@@ -374,6 +404,7 @@ public class Terrain {
 		int vc = 0;
 		int bc = 0;
 		int fc = 0;
+		int vf = 0;
 		Block a = null;
 		synchronized (addBlocks) {
 			Iterator<Block> it = addBlocks.values().iterator();
@@ -407,11 +438,12 @@ public class Terrain {
 		if (c != null) {
 			c.freeVbo();
 			c.destroy();
-			vc++;
+			vf++;
 		}
 		long duration = Sys.getTime() - time;
 		if (duration > (1000 / 60)) {
-			log("terrain.draw " + vc + " vbos; " + bc + " blocks; " + fc + " faces in " + duration  + " ms");
+			log("terrain.draw: created " + vc + " vbos; drawn " + bc + " vbos & " + fc +
+					" faces; freed " + vf + " vbos in " + duration  + " ms");
 		}
 	}
 	
