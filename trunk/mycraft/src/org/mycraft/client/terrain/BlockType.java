@@ -1,4 +1,4 @@
-package org.mycraft.client;
+package org.mycraft.client.terrain;
 
 public enum BlockType {
 

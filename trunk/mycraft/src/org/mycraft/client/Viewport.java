@@ -56,17 +56,19 @@ public class Viewport {
 		logGlErrorIfAny();
 		warn("GL_VERSION: " + GL11.glGetString(GL11.GL_VERSION));
 		logGlErrorIfAny();
+		warn("GL_EXTENSIONS: " + GL11.glGetString(GL11.GL_EXTENSIONS));
+		logGlErrorIfAny();
 		warn("glLoadTransposeMatrixfARB() supported: " + GLContext.getCapabilities().GL_ARB_transpose_matrix);
 		logGlErrorIfAny();
 
 		log("viewport width=" + getWidth() + " & height=" + getHeight());
 		GL11.glViewport(0, 0, getWidth(), getHeight());
 		logGlErrorIfAny();
-		
+		log("window W:H ratio " + (getWidth() / (double) getHeight())
+				+ " near=" + zNear + " far=" + zFar);
 		GL11.glGetInteger(GL11.GL_VIEWPORT, viewport);
 		logGlErrorIfAny();
 		
-		log("window W:H ratio " + (getWidth() / (double) getHeight()));
 		proj3d();
 	}
 	
@@ -101,6 +103,12 @@ public class Viewport {
 		
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
 		logGlErrorIfAny();
+		
+		GL11.glEnable(GL11.GL_DEPTH_TEST);
+		logGlErrorIfAny();
+		
+//		boolean haveBlend = GL11.glIsEnabled(GL11.GL_BLEND);
+//		log("3d blending is: " + haveBlend);
 	}
 
 	public void proj2d() {
@@ -115,6 +123,15 @@ public class Viewport {
 		
 		GL11.glMatrixMode(GL11.GL_MODELVIEW);
 		logGlErrorIfAny();
+		
+		GL11.glDisable(GL11.GL_DEPTH_TEST);
+		logGlErrorIfAny();
+		
+//		GL11.glEnable(GL11.GL_BLEND);
+//		logGlErrorIfAny();
+		
+//		boolean haveBlend = GL11.glIsEnabled(GL11.GL_BLEND);
+//		log("2d blending is: " + haveBlend);
 	}
 	
 	public IntBuffer getMatrix() {

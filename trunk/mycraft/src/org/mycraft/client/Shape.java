@@ -11,6 +11,9 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
 import org.newdawn.slick.opengl.Texture;
 
+/**
+ * Dummy block
+ */
 public class Shape {
 
 	private float x, y, z;
@@ -215,6 +218,7 @@ public class Shape {
 	    GL11.glColor4f(1f, 1f, 1f, 1f);
 	    logGlErrorIfAny();
 	    txtr.bind();
+	    logGlErrorIfAny();
 	    
 	    GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
 	    logGlErrorIfAny();

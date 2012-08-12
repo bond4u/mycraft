@@ -9,10 +9,13 @@ import org.lwjgl.opengl.ARBBufferObject;
 import org.lwjgl.opengl.ARBVertexBufferObject;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
-import org.noise.Ground;
-import org.noise.IFunc2D;
+import org.mycraft.client.terrain.BlockType;
+import org.mycraft.client.terrain.Generator;
 
-public class Block {
+/**
+ * Chunk of 16 x 16 x 16 blocks.
+ */
+public class Chunk {
 	
 	private static final int DIM = 16; // block dimensions (block data is byte)
 	// = center + x rows & x columns & x layers
@@ -29,7 +32,7 @@ public class Block {
 //	private static final int COLORBYTES_PER_FACE = POINTS_PER_FACE * BYTES_PER_COLOR; // 4 * 3 = 12
 	private static final int BYTES_PER_SHORT = Short.SIZE / BITS_PER_BYTE; // 16/8=2
 	
-	private final Terrain terra;
+	private final Generator terraGen;
 	private final float blockX; // min(cellx)
 	private final float blockY; // min(celly)
 	private final float blockZ; // min(cellz)
@@ -48,8 +51,8 @@ public class Block {
 	private int colorBytes;
 	private int indexBytes;
 	
-	public Block(Terrain t, float x, float y, float z) {
-		this.terra = t;
+	public Chunk(Generator g, float x, float y, float z) {
+		this.terraGen = g;
 		this.blockX = x;
 		this.blockY = y;
 		this.blockZ = z;
@@ -100,10 +103,10 @@ public class Block {
 		float colorRange = 128f;
 		float ratio = (colorRange / spaceRange);
 		byte c2 = (byte) ((colorRange / 2) + (ratio * h));
-		Integer c = 0; // r
+		Integer c = 0x00; // r
 		c |= (c2 << 8); // g
 		c |= (0x00 << 16); // b
-		c |= (Byte.MAX_VALUE << 24); // a
+		c |= (Byte.MAX_VALUE << 24); // a, signed byte
 //		Integer c = 0xFF | (0xFF << 8) | (0xFF << 16) | (0xFF << 24); // rgba
 //		log("c=" + Integer.toHexString(c));
 		cls.add(c);
@@ -209,67 +212,35 @@ public class Block {
 //		resetLowHigh();
 		final int dim = getDim();
 //		IFunc2D func = terra.getFunc();
-		Ground gen = terra.getGenerator();
+//		Ground gen = terra.getGenerator();
 		short i = 0;
 		for (byte iX = 0; iX < dim; iX++) {
 			float terraX = blockX + iX;
 			for (byte iZ = 0; iZ < dim; iZ++) {
 				float terraZ = blockZ + iZ;
-				// TODO get() below should return cube type
-				// or voxel aka height from some point
-				// point 0,0,0 w/ height 3 and point 0,5,0 w/ height 2
-				// so that there is hole at point 0,3,0 w/ height 2
-//				float terraY = func.get(terraX, terraZ);
-//				float roundedY = round(terraY);
-//				float surfaceY = height(roundedY);
-//				checkLowHigh((byte)surfaceY);
-//				byte cnt = 0;
 				for (byte iY = (byte) (dim-1); iY >= 0; iY--) {
 					float terraY = blockY + iY;
-					BlockType bt = gen.get(terraX, terraY, terraZ);
-//					boolean dense = isDense(surfaceY, iY);
+					BlockType bt = terraGen.get(terraX, terraY, terraZ);
 					boolean dense = bt.isDense();
 					if (dense) {
-//						if (cnt == 0) { // first (topmost) cube, create it
-//							i = addCube(iX, iY, iZ, i, vrt, cls, idx);
-//						} else {
-							// check neighbours
-//							float tYr = func.get(terraX+1, terraZ);
-						BlockType btr = gen.get(terraX+1, terraY, terraZ);
-//							tYr = round(tYr);
-//							tYr = height(tYr);
-//							boolean denseR = isDense(tYr, iY);
+						BlockType btr = terraGen.get(terraX+1, terraY, terraZ);
 						boolean denseR = btr.isDense();
-//							float tYl = func.get(terraX-1, terraZ);
-						BlockType btl = gen.get(terraX-1, terraY, terraZ);
-//							tYl = round(tYl);
-//							tYl = height(tYl);
-//							boolean denseL = isDense(tYl, iY);
+						BlockType btl = terraGen.get(terraX-1, terraY, terraZ);
 						boolean denseL = btl.isDense();
-//							float tYf = func.get(terraX, terraZ-1);
-						BlockType btf = gen.get(terraX, terraY, terraZ-1);
-//							tYf = round(tYf);
-//							tYf = height(tYf);
-//							boolean denseF = isDense(tYf, iY);
+						BlockType btf = terraGen.get(terraX, terraY, terraZ-1);
 						boolean denseF = btf.isDense();
-//							float tYb = func.get(terraX, terraZ+1);
-						BlockType btb = gen.get(terraX, terraY, terraZ+1);
-//							tYb = round(tYb);
-//							tYb = height(tYb);
-//							boolean denseB = isDense(tYb, iY);
+						BlockType btb = terraGen.get(terraX, terraY, terraZ+1);
 						boolean denseB = btb.isDense();
-						BlockType btt = gen.get(terraX, terraY+1, terraZ);
+						BlockType btt = terraGen.get(terraX, terraY+1, terraZ);
 						boolean denseT = btt.isDense();
-						BlockType bto = gen.get(terraX, terraY-1, terraZ);
+						BlockType bto = terraGen.get(terraX, terraY-1, terraZ);
 						boolean denseO = bto.isDense();
-							if (denseR == false || denseL == false ||
-									denseF == false || denseB == false ||
-									denseT == false || denseO == false) {
-								// one of the neighbours is missing, add another cube
-								i = addCube(iX, iY, iZ, i, vrt, cls, idx);
-							}
-//						}
-//						cnt++;
+						if (denseR == false || denseL == false ||
+								denseF == false || denseB == false ||
+								denseT == false || denseO == false) {
+							// one of the neighbours is missing, add cube
+							i = addCube(iX, iY, iZ, i, vrt, cls, idx);
+						}
 					}
 				}
 			}
@@ -348,8 +319,6 @@ public class Block {
 //		log("created vbo " + vxBufId);
 		ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ARRAY_BUFFER_ARB, vxBufId);
 		logGlErrorIfAny();
-//		vertexBytes = faceCount * VERTEXBYTES_PER_FACE;
-//		colorBytes = faceCount * COLORBYTES_PER_FACE;
 		vertexBytes = vertices.size() * BYTES_PER_VERTEX;
 		colorBytes = colors.size() * BYTES_PER_COLOR;
 		indexBytes = indices.size() * BYTES_PER_SHORT;
@@ -396,7 +365,6 @@ public class Block {
 			b.putFloat(p.getY());
 			b.putFloat(p.getZ());
 			Integer c = cls.get(i);
-//			b.putInt(c);
 			byte r = (byte) (c & 0xFF);
 			byte g = (byte) ((c >> 8) & 0xFF);
 			byte bb = (byte) ((c >> 16) & 0xFF);
@@ -409,10 +377,6 @@ public class Block {
 		} while (i < vrt.size());
 		for (Short s : idx) {
 			b.putShort(s);
-//			byte l = (byte) (s & 0xFF);
-//			byte h = (byte) ((s >> 8) & 0xFF);
-//			b.put(l);
-//			b.put(h);
 		}
 	}
 	
@@ -428,8 +392,6 @@ public class Block {
 //	    	log("dura0 " + dura0 + " ms");
 //	    }
 	    
-//	    GL11.glScalef(0.5f, 0.5f, 0.5f);
-//	    logGlErrorIfAny();
 //	    long start1 = System.currentTimeMillis();
 	    GL11.glTranslatef(blockX, blockY, blockZ);
 	    logGlErrorIfAny();
@@ -456,13 +418,6 @@ public class Block {
 //	    	log("dura3 " + dura3 + " ms");
 //	    }
 	    
-	    // FIXME i'm not sure what was the problem
-	    // 1) ati
-	    // 2) laptop
-	    // 3) rgb color (instead of rgba)
-	    // 4) vertices as shorts (floats are best i guess)
-	    // .. but it's working now
-	    
 //	    long start4 = System.currentTimeMillis();
 	    GL11.glVertexPointer(COMPONENTS_PER_POINT, GL11.GL_FLOAT, BYTES_PER_VERTEX + BYTES_PER_COLOR, 0);
 	    logGlErrorIfAny();
@@ -478,8 +433,6 @@ public class Block {
 	    ARBVertexBufferObject.glBindBufferARB(ARBVertexBufferObject.GL_ELEMENT_ARRAY_BUFFER_ARB, vxBufId);
 	    logGlErrorIfAny();
 	    
-//	    GL12.glDrawRangeElements(GL11.GL_QUADS, 0, (vertexBytes / BYTES_PER_VERTEX)-1, indexBytes / 2,
-//	    		GL11.GL_UNSIGNED_SHORT, vertexBytes + colorBytes);
 	    GL11.glDrawElements(GL11.GL_QUADS, indexBytes / 2, GL11.GL_UNSIGNED_SHORT, vertexBytes + colorBytes);
 	    logGlErrorIfAny();
 //	    long dura5 = System.currentTimeMillis() - start5;

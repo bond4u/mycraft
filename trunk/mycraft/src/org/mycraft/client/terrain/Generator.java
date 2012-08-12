@@ -1,8 +1,14 @@
-package org.noise;
+package org.mycraft.client.terrain;
 
 import java.util.Random;
 
-import org.mycraft.client.BlockType;
+import org.mycraft.client.Point3f;
+import org.noise.FBM2;
+import org.noise.IFunc2D;
+import org.noise.IMult;
+import org.noise.Mult;
+import org.noise.PermutationsTable;
+import org.noise.Turbulence;
 
 /*
  * Generates heightmap and scales it.
@@ -11,7 +17,7 @@ import org.mycraft.client.BlockType;
  * Scales y up.
  * Height y at point x,z results 3d point x,y,z aka heightmap.
  */
-public class Ground {
+public class Generator {
 	
 	private final short MULT = 16;
 	
@@ -27,7 +33,7 @@ public class Ground {
 	
 	private Turbulence turb;
 	
-	public Ground(Random r) {
+	public Generator(Random r) {
 		// heightmap table
 		tbl = createPermTbl(r);
 		// scale plane (more detailed terrain)
@@ -82,17 +88,22 @@ public class Ground {
 //		double d = (r >= 0f) ? Math.floor(r) : Math.ceil(r);
 //		return (float) d;
 //	}
-
+	
+	// returns scaled point
+	protected Point3f height(float x, float z) {
+		float x2 = coord.get(x); // scale x
+		float z2 = coord.get(z); // scale z
+		float y0 = src.get(x2, z2); // get ground level
+		float y2 = height.get(y0); // scale y
+		return new Point3f(x2, y2, z2);
+	}
+	
 	public BlockType get(float x, float y, float z) {
-		float x2 = coord.get(x);
-		float z2 = coord.get(z);
-		float y2 = src.get(x2, z2);
-		y2 = height.get(y2);
-//		float y3 = round(y2);
+		Point3f pt = height(x, z);
 		BlockType bt = BlockType.Air;
-		if (y <= y2) {
+		if (y <= pt.getY()) {
 			// underground, start digging
-			float t = turb.get(x2, coord.get(y), z2);
+			float t = turb.get(pt.getX(), coord.get(y), pt.getZ());
 		    if (t < 1.0f) {
 		    	bt = BlockType.Ground;
 		    }
