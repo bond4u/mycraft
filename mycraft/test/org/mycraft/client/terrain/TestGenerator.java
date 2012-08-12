@@ -1,12 +1,15 @@
-package org.noise;
+package org.mycraft.client.terrain;
 
 import java.util.Random;
 
-public class TestGround extends Ground {
+import org.mycraft.client.terrain.Generator;
+import org.noise.IFunc2D;
+
+public class TestGenerator extends Generator {
 	
 //	private short mult;
 	
-	public TestGround(Random r) {
+	public TestGenerator(Random r) {
 		super(r);
 	}
 	

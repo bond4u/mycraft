@@ -1,4 +1,4 @@
-package org.mycraft.client;
+package org.mycraft.client.terrain;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -11,25 +11,24 @@ import java.util.TreeMap;
 import org.lwjgl.Sys;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
-import org.noise.Ground;
-import org.noise.IFunc2D;
+import org.mycraft.client.Camera;
+import org.mycraft.client.Chunk;
+import org.mycraft.client.Point3f;
+import org.mycraft.client.Viewport;
 
+/**
+ * Chunkmanager - holder of chunks.
+ */
 public class Terrain {
 	
-	private final Ground generator;
+	private final Generator generator;
 	private final Comparator<Point3f> comp;
-	private final Map<Point3f, Block> addBlocks; // newly created blocks
- 	private final Map<Point3f, Block> renderBlocks; // currently being rendered 
-	private final Map<Point3f, Block> cacheBlocks; // removed from rendering, may be re-used
-	private final List<Block> removeBlocks;
+	private final Map<Point3f, Chunk> addBlocks; // newly created blocks
+ 	private final Map<Point3f, Chunk> renderBlocks; // currently being rendered 
+	private final Map<Point3f, Chunk> cacheBlocks; // removed from rendering, may be re-used
+	private final List<Chunk> removeBlocks;
 	private final Thread thread; // terrain calc thread
 
-//	private float lowestH = Float.MAX_VALUE;
-//	private float highestH = Float.MIN_VALUE;
-	
-//	private float lowest;
-//	private float highest;
-	
 	private boolean calcing;
 	
 	public Terrain(Random r, Viewport v, Camera c) {
@@ -42,104 +41,51 @@ public class Terrain {
 		thread = createCalcer(v, c);
 	}
 	
-	protected Ground createGenerator(Random r) {
-		return new Ground(r);
+	protected Generator createGenerator(Random r) {
+		return new Generator(r);
 	}
 	
-	protected Map<Point3f, Block> createAddBlocksMap(Comparator<Point3f> c) {
-		Map<Point3f, Block> m = new TreeMap<Point3f, Block>();
+	protected Map<Point3f, Chunk> createAddBlocksMap(Comparator<Point3f> c) {
+		Map<Point3f, Chunk> m = new TreeMap<Point3f, Chunk>();
 		return m;
 	}
 	
-	protected Map<Point3f, Block> createRenderBlocksMap(Comparator<Point3f> c) {
-		Map<Point3f, Block> m = new TreeMap<Point3f, Block>(c);
+	protected Map<Point3f, Chunk> createRenderBlocksMap(Comparator<Point3f> c) {
+		Map<Point3f, Chunk> m = new TreeMap<Point3f, Chunk>(c);
 //		Map<Point2i, Block> sm = Collections.synchronizedMap(m);
 		return m;
 	}
 	
-	protected Map<Point3f, Block> createCacheBlocksMap(Comparator<Point3f> c) {
-		Map<Point3f, Block> m = new TreeMap<Point3f, Block>(c);
+	protected Map<Point3f, Chunk> createCacheBlocksMap(Comparator<Point3f> c) {
+		Map<Point3f, Chunk> m = new TreeMap<Point3f, Chunk>(c);
 		return m;
 	}
 	
-	protected List<Block> createRemoveBlocksList() {
-		List<Block> l = new ArrayList<Block>();
+	protected List<Chunk> createRemoveBlocksList() {
+		List<Chunk> l = new ArrayList<Chunk>();
 		return l;
 	}
 	
-//	protected IFunc2D getFunc() {
-//		return func;
-//	}
-	
-//	protected float round(float f) {
-//		float r = (f >= 0f) ? f + 0.49999999f : f - 0.49999999f;
-//		double d = (r >= 0f) ? Math.floor(r) : Math.ceil(r);
-//		return (float) d;
-//	}
-
-//	protected void checkHeight(float h) {
-//		if (h < lowestH) {
-//			lowestH = h;
-//		}
-//		if (h > highestH) {
-//			highestH = h;
-//		}
-//	}
-
-//	public BlockType get(float x, float y, float z) {
-//		float y2 = func.get(x, z);
-////		checkHeight(y2);
-//		y2 = round(y2);
-//		BlockType bt = (y > y2) ? BlockType.Air : BlockType.Ground;
-//		return bt;
-//	}
-	
-	public Ground getGenerator() {
+	public Generator getGenerator() {
 		return generator;
 	}
 	
 	public void create() {
-//		resetLowHigh();
 		// just screate one block at (0,0)
 		final float startX = 0f;
 		final float startY = 0f;
 		final float startZ = 0f;
 		Point3f p = new Point3f(startX, startY, startZ);
-		Block b = createBlock(startX, startY, startZ);
+		Chunk b = createBlock(startX, startY, startZ);
 		b.generate();
 		b.initVBO();
 		renderBlocks.put(p, b);
-//		addBlocks.add(b);
-//		checkLowHigh(b.lowest(), b.highest());
-//		assert lowest == highest : "flat terrain";
 		startCalcer();
 	}
 	
-//	protected void resetLowHigh() {
-//		lowest = Short.MAX_VALUE;
-//		highest = Short.MIN_VALUE;
-//	}
-	
-	protected Block createBlock(float x, float y, float z) {
-		return new Block(this, x, y, z/*, getFunc()*/);
+	protected Chunk createBlock(float x, float y, float z) {
+		return new Chunk(getGenerator(), x, y, z);
 	}
-	
-//	protected void checkLowHigh(float l, float h) {
-//		if (l < lowest) {
-//			lowest = l;
-//		}
-//		if (h > highest) {
-//			highest = h;
-//		}
-//	}
-	
-//	public float lowest() {
-//		return lowest;
-//	}
-	
-//	public float highest() {
-//		return highest;
-//	}
 	
 	protected Thread createCalcer(final Viewport v, final Camera c) {
 		log("creating terrain calcer");
@@ -178,16 +124,16 @@ public class Terrain {
 	
 	private Point3f lastPoint = null;
 	private float[] delta = new float[] { 0f, 0f, 0f, };
-	private float radius = Block.getDim();
+	private float radius = Chunk.getDim();
 	private int stage = 0;
 	
 	protected int genBlocks(Camera c, Viewport v) {
 		// track camera ?
 		float[] fCamPos = c.getPosition(); // x=l/r, y=u/d, z=f/b
 		fCamPos[1] = 0f; // Y is up
-		Point3f cpt = Block.calcBlockPoint(fCamPos[0], fCamPos[1], fCamPos[2]);
+		Point3f cpt = Chunk.calcBlockPoint(fCamPos[0], fCamPos[1], fCamPos[2]);
 		// get cam block
-		Block b;
+		Chunk b;
 		synchronized (renderBlocks) {
 			b = renderBlocks.get(cpt);
 		}
@@ -203,8 +149,8 @@ public class Terrain {
 				b = cacheBlocks.get(cpt);
 				if (b != null) { // available and ready for re-use
 					cacheBlocks.remove(cpt);
-					synchronized (renderBlocks) {
-						renderBlocks.put(cpt, b);
+					synchronized (addBlocks) {
+						addBlocks.put(cpt, b);
 					}
 				}
 			}
@@ -219,7 +165,7 @@ public class Terrain {
 			// looking down: pos x, looking up: neg x, rot around x axis
 			// rotating left: neg y, looking right: pos y, rot around y axis
 			// z never changes, tilting left-right
-			int dim = Block.getDim();
+			int dim = Chunk.getDim();
 			// 0-angle means straight on
 			float far = v.getFar() + dim * 2f;
 			far = (float) (dim * Math.floor(far / dim));
@@ -250,8 +196,8 @@ public class Terrain {
 						b = cacheBlocks.get(pt);
 						if (b != null) {
 							cacheBlocks.remove(pt);
-							synchronized (renderBlocks) {
-								renderBlocks.put(pt, b);
+							synchronized (addBlocks) {
+								addBlocks.put(pt, b);
 							}
 						}
 					}
@@ -353,15 +299,19 @@ public class Terrain {
 	
 	protected void dropBlocks(Camera c, Viewport v) {
 		float[] camPos = c.getPosition();
-		short blkDim = Block.getDim();
+		short blkDim = Chunk.getDim();
 		float far = v.getFar() + blkDim * 4;
+		float minX = camPos[0] - far;
+		float maxX = camPos[0] + far;
+		float minZ = camPos[2] - far;
+		float maxZ = camPos[2] + far;
+		int bc = 100;
 		synchronized (renderBlocks) {
 			for (Point3f p : renderBlocks.keySet()) {
-				if (p.getX() < camPos[0] - far || p.getX() > camPos[0] + far ||
+				if (p.getX() < minX || p.getX() > maxX ||
 						/*p.getY() < camPos[1] - dim || p.getY() > camPos[1] + dim ||*/
-						p.getZ() < camPos[2] - far || p.getZ() > camPos[2] + far) {
-					Block b = renderBlocks.remove(p);
-//					b.destroy();
+						p.getZ() < minZ || p.getZ() > maxZ) {
+					Chunk b = renderBlocks.remove(p);
 					synchronized (cacheBlocks) {
 						cacheBlocks.put(p, b);
 					}
@@ -370,19 +320,28 @@ public class Terrain {
 					break; // one at a time
 				}
 			}
+			bc = renderBlocks.size();
+		}
+		synchronized (cacheBlocks) {
+			if (cacheBlocks.size() > bc) {
+				Iterator<Point3f> it = cacheBlocks.keySet().iterator();
+				Point3f p = it.next();
+				Chunk b = cacheBlocks.remove(p);
+				synchronized (removeBlocks) {
+					removeBlocks.add(b);
+				}
+			}
 		}
 	}
 	
-	protected Block addBlock(Point3f p) {
-		Block b = createBlock(p.getX(), p.getY(), p.getZ());
+	protected Chunk addBlock(Point3f p) {
+		Chunk b = createBlock(p.getX(), p.getY(), p.getZ());
 		b.generate();
 		// vbo stuff is done in (main GL) drawing thread
 		synchronized (addBlocks) {
 			addBlocks.put(p, b);
 		}
 //		log("added block @ " + p.getX() + "x" + p.getY() + "x" + p.getZ());
-//		checkLowHigh(b.lowest(), b.highest());
-//		log("terrain lowest " + lowest + " & highest " + highest);
 //		synchronized (blocks) {
 //			log("map size " + blocks.size() + " blocks.");
 //		}
@@ -405,9 +364,9 @@ public class Terrain {
 		int bc = 0;
 		int fc = 0;
 		int vf = 0;
-		Block a = null;
+		Chunk a = null;
 		synchronized (addBlocks) {
-			Iterator<Block> it = addBlocks.values().iterator();
+			Iterator<Chunk> it = addBlocks.values().iterator();
 			if (it.hasNext()) {
 				a = it.next();
 				it.remove();
@@ -422,14 +381,14 @@ public class Terrain {
 			if (a != null) {
 				renderBlocks.put(new Point3f(a.getX(), a.getY(), a.getZ()), a);
 			}
-			for (Block b : renderBlocks.values()) {
+			for (Chunk b : renderBlocks.values()) {
 				b.draw();
 				bc++;
 				fc += b.getFaceCount();
 			}
 		}
 		// it's not nice, but we have to free vbo somewhere
-		Block c = null;
+		Chunk c = null;
 		synchronized (removeBlocks) {
 			if (removeBlocks.size() > 0) {
 				c = removeBlocks.remove(0);
@@ -449,19 +408,19 @@ public class Terrain {
 	
 	public void destroy() {
 		stopCalcer();
-		for (Block b : addBlocks.values()) {
+		for (Chunk b : addBlocks.values()) {
 			b.freeVbo();
 			b.destroy();
 		}
-		for (Block b : renderBlocks.values()) {
+		for (Chunk b : renderBlocks.values()) {
 			b.freeVbo();
 			b.destroy();
 		}
-		for (Block b : cacheBlocks.values()) {
+		for (Chunk b : cacheBlocks.values()) {
 			b.freeVbo();
 			b.destroy();
 		}
-		for (Block b : removeBlocks) {
+		for (Chunk b : removeBlocks) {
 			b.freeVbo();
 			b.destroy();
 		}

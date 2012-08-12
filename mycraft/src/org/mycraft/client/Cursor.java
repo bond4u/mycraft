@@ -15,7 +15,7 @@ public class Cursor {
 		float d = 0.00075f;
 		float t = 0.00015f;
 		
-		GL11.glColor3f(1f, 1f, 1f); // too thin line
+		GL11.glColor4f(1f, 1f, 1f, 1f); // too thin line
 		logGlErrorIfAny();
 		
 		// no error-checking between begin & end
@@ -31,7 +31,7 @@ public class Cursor {
 		GL11.glEnd();
 		logGlErrorIfAny();
 		
-		GL11.glColor3f(0f, 0f, 0f);
+		GL11.glColor4f(0f, 0f, 0f, 1f);
 		logGlErrorIfAny();
 		
 		GL11.glBegin(GL11.GL_LINE_STRIP);

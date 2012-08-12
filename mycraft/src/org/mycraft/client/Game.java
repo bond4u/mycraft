@@ -17,9 +17,14 @@ import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
+import org.mycraft.client.terrain.Terrain;
 import org.newdawn.slick.Color;
 import org.newdawn.slick.TrueTypeFont;
+import org.newdawn.slick.opengl.TextureImpl;
+//import org.newdawn.slick.TrueTypeFont;
 import org.newdawn.slick.util.ResourceLoader;
+
+import sun.nio.ch.DirectBuffer;
 
 public class Game extends Thread {
 	
@@ -147,7 +152,7 @@ public class Game extends Thread {
 			GL11.glTranslatef(0f, 0f, -0.1f);
 			logGlErrorIfAny();
 
-			GL11.glColor3f(0f, 0f, 1f);
+			GL11.glColor4f(0f, 0f, 1f, 1f); // alpha 0=transparent
 			logGlErrorIfAny();
 			
 			float l1 = 50f;
@@ -179,16 +184,22 @@ public class Game extends Thread {
 			
 			GL11.glEnd();
 			logGlErrorIfAny();
-
-			GL11.glEnable(GL11.GL_BLEND); // enable transparency
-			logGlErrorIfAny();
+			
+			GL11.glPushAttrib(GL11.GL_CURRENT_BIT);
+			logGlErrorIfAny();			
 
 			menuFont.drawString(l1, t1, "Esc - Pause/Resume", Color.white);
 			
 			menuFont.drawString(l2, t2, "Q - Quit", Color.white);
 			
-			GL11.glDisable(GL11.GL_BLEND); // disable transparency
+			GL11.glPopAttrib();
 			logGlErrorIfAny();
+			// FIXME odd that something goes wrong with drawString() besides texturing
+			GL11.glDisable(GL11.GL_TEXTURE_2D);
+			logGlErrorIfAny();
+			
+//			GL11.glColor4f(1f, 1f, 1f, 1f);
+//			logGlErrorIfAny();
 
 			GL11.glPopMatrix();
 			logGlErrorIfAny(); // -1=0
@@ -323,30 +334,45 @@ public class Game extends Thread {
 		// setup ogl
 //		GL11.glEnable(GL11.GL_LIGHTING);
 //		logGlErrorIfAny();
+//		boolean haveLighting = GL11.glIsEnabled(GL11.GL_LIGHTING);
+//		log("lighting is: " + haveLighting);
 //		GL11.glEnable(GL11.GL_LIGHT0);
 //		logGlErrorIfAny();
+//		boolean haveLight0 = GL11.glIsEnabled(GL11.GL_LIGHT0);
+//		log("light 0 is: " + haveLight0);
 		GL11.glShadeModel(GL11.GL_SMOOTH);
 		logGlErrorIfAny();
-		GL11.glClearDepth(1.0f);
+//		int haveShadeModel = GL11.glGetInteger(GL11.GL_SHADE_MODEL);
+//		log("shading model is: " + haveShadeModel + " (" + (haveShadeModel==GL11.GL_SMOOTH?"SMOOTH":"n/a") + ")");
+		GL11.glDepthFunc(GL11.GL_LEQUAL);
 		logGlErrorIfAny();
+		GL11.glDepthMask(true);
+		logGlErrorIfAny();
+		// depthrange is default [0.0..1.0]
 		GL11.glEnable(GL11.GL_CULL_FACE); // dont render hidden/back faces
 		logGlErrorIfAny();
-		GL11.glDepthFunc(GL11.GL_LEQUAL); // depth test type
-		logGlErrorIfAny();
-		GL11.glEnable(GL11.GL_DEPTH_TEST);
-		logGlErrorIfAny();
-		GL11.glEnable(GL11.GL_TEXTURE_2D);
-		logGlErrorIfAny();
+//		int haveCullMode = GL11.glGetInteger(GL11.GL_CULL_FACE_MODE);
+//		log("cull face mode is: " + haveCullMode + " (" + (haveCullMode==GL11.GL_BACK?"BACK":"n/a") + ")");
+//		GL11.glEnable(GL11.GL_TEXTURE_2D);
+//		logGlErrorIfAny();
+//		boolean haveTexture = GL11.glIsEnabled(GL11.GL_TEXTURE_2D);
+//		log("2d textures are: " + haveTexture);
 //			glEnable(GL_COLOR_MATERIAL);
+		GL11.glEnable(GL11.GL_BLEND); // enable transparency
+		logGlErrorIfAny();
 		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA); // avg colors together
 		logGlErrorIfAny();
-//		GL11.glEnable(GL11.GL_BLEND); // enable transparency
+//		boolean haveBlend = GL11.glIsEnabled(GL11.GL_BLEND);
+//		log("blending is: " + haveBlend);
+//		glEnable(GL_NORMALIZE); // forces normals to size of 1
+//		GL11.glAlphaFunc(GL11.GL_GREATER, 0f);
 //		logGlErrorIfAny();
-//			glEnable(GL_NORMALIZE); // forces normals to size of 1
-//			GL11.glAlphaFunc(GL11.GL_GREATER, 0f);
-//			logGlErrorIfAny();
+//		int alphaFunc = GL11.glGetInteger(GL11.GL_ALPHA_TEST_FUNC);
+//		log("alpha test func is: " + alphaFunc + " (" + (alphaFunc==GL11.GL_ALWAYS?"ALWAYS":"n/a") + ")");
 //		GL11.glEnable(GL11.GL_ALPHA_TEST); // enable transparency in textures
 //		logGlErrorIfAny();
+//		boolean haveAlphaTest = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
+//		log("alpha test is: " + haveAlphaTest);
 		GL11.glHint(GL11.GL_PERSPECTIVE_CORRECTION_HINT, GL11.GL_NICEST);
 		logGlErrorIfAny();
 			
@@ -405,6 +431,9 @@ public class Game extends Thread {
 	private void drawWorld() {
 //		long start = System.currentTimeMillis();
 		GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | /*GL_STENCIL_BUFFER_BIT |*/ GL11.GL_DEPTH_BUFFER_BIT);
+		logGlErrorIfAny();
+		
+		GL11.glClearDepth(1.0);
 		logGlErrorIfAny();
 		
 		GL11.glLoadIdentity();
@@ -514,7 +543,7 @@ public class Game extends Thread {
 					(float)Math.floor(y),
 					(float)Math.floor(z));
 			// black line, but it's too thin
-			GL11.glColor3f(0f, 0f, 0f);
+			GL11.glColor4f(0f, 0f, 0f, 1f);
 			logGlErrorIfAny();
 			// let's draw a wired cube
 			float d = 1f;

@@ -8,14 +8,17 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
-import org.mycraft.client.Block;
+import org.mycraft.client.Chunk;
 import org.mycraft.client.Camera;
 import org.mycraft.client.Point3f;
-import org.mycraft.client.Terrain;
 import org.mycraft.client.Viewport;
+import org.mycraft.client.terrain.BlockType;
+import org.mycraft.client.terrain.Generator;
+import org.mycraft.client.terrain.Terrain;
 
-public class BlockTest {
+public class ChunkTest {
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -34,14 +37,14 @@ public class BlockTest {
 	}
 
 	@Test
-	public void testBlock() {
+	public void testChunk() {
 		Random r = new Random(653654654);
 		Viewport v = new Viewport();
 		Camera c = new Camera();
 		Terrain t = new Terrain(r, v, c);
 		try {
 			// block ctor doesnt "do" GL
-			Block b = new Block(t, 0f, 0f, 0f);
+			Chunk b = new Chunk(t.getGenerator(), 0f, 0f, 0f);
 			// neither does "generate"
 			b.generate();
 		} catch (Throwable th) {
@@ -60,13 +63,11 @@ public class BlockTest {
 	@Test
 	public void testCalcCenter() {
 		// check block values -22..-8,-7..7,8..23
-		short blkDim = Block.getDim();
-//		short hd = (short) (blkDim / 2);
+		short blkDim = Chunk.getDim();
 		for (float x = 2 * -blkDim; x < 2 * blkDim; x += 0.5f) {
 			for (float y = 2 * -blkDim; y < 2 * blkDim; y += 0.5f) {
 				for (float z = 2 * -blkDim; z < 2 * blkDim; z += 0.5f) {
-//			Point2i c = Block.calcCenter(x, 0);
-					Point3f c = Block.calcBlockPoint(x, y, z);
+					Point3f c = Chunk.calcBlockPoint(x, y, z);
 					float x2 = (float) (blkDim * Math.floor(x / blkDim));
 					float y2 = (float) (blkDim * Math.floor(y / blkDim));
 					float z2 = (float) (blkDim * Math.floor(z / blkDim));
@@ -79,19 +80,31 @@ public class BlockTest {
 		}
 	}
 	
+	protected byte height(Chunk b, Generator g, int x, int z) {
+		byte h = 0;
+		for (byte y = 0; y < Chunk.getDim(); y++) {
+			BlockType bt = g.get(b.getX() + x, b.getY() + y, b.getZ() + z);
+			if (bt.isDense()) {
+				h = y;
+			}
+		}
+		return h;
+	}
+	
 	@Test
-	public void testBlockBorder() {
+	@Ignore /* no longer valid - ground can have holes in it, caves, overhangs etc */
+	public void testChunkBorder() {
 		Random r = new Random(5432543);//546543654);
 		Viewport v = new Viewport();
 		Camera c = new Camera();
-		final Block[] blocks = { null, null, null, null, null, };
-		final int dim = Block.getDim();
+		final Chunk[] blocks = { null, null, null, null, null, };
+		final int dim = Chunk.getDim();
 		final float tx = dim * 3;
 		final float ty = 0f;
 		final float tz = dim * 4;
 		Terrain t = new Terrain(r, v, c) {
-			protected Block createBlock(float x, float y, float z) {
-				return new Block(this, x, y, z) {
+			protected Chunk createBlock(float x, float y, float z) {
+				return new Chunk(getGenerator(), x, y, z) {
 					public void initVBO() {
 						// do nothing
 					}
@@ -117,43 +130,14 @@ public class BlockTest {
 			}
 		} catch (InterruptedException ie) {
 		}
-		// check block values
-//		byte[][][][] d = {
-//				blocks[0].getData(),
-//				blocks[1].getData(),
-//				blocks[2].getData(),
-//				blocks[3].getData(),
-//				blocks[4].getData(), };
 		for (int x = 0; x < dim; x++) {
 			for (int z = 0; z < dim; z++) {
 				byte[] b = {
-						(byte)blocks[0].height(blocks[0].round(t.getFunc().get(x, z))), // lower2 block
-						(byte)blocks[1].height(blocks[1].round(t.getFunc().get(x, z))), // lower block
-						(byte)blocks[2].height(blocks[2].round(t.getFunc().get(x, z))), // middle block
-						(byte)blocks[3].height(blocks[3].round(t.getFunc().get(x, z))),// upper block
-						(byte)blocks[4].height(blocks[4].round(t.getFunc().get(x, z))), }; // upper2 block
-//				for (int y = 0; y < dim; y++) {
-//					byte a = d[0][x][y][z];
-//					if (a != 0) {
-//						b[0]++;
-//					}
-//					a = d[1][x][y][z];
-//					if (a != 0) {
-//						b[1]++;
-//					}
-//					a = d[2][x][y][z];
-//					if (a != 0) {
-//						b[2]++;
-//					}
-//					a = d[3][x][y][z];
-//					if (a != 0) {
-//						b[3]++;
-//					}
-//					a = d[4][x][y][z];
-//					if (a != 0) {
-//						b[4]++;
-//					}
-//				}
+						height(blocks[0], t.getGenerator(), x, z), // lower2 block
+						height(blocks[1], t.getGenerator(), x, z), // lower block
+						height(blocks[2], t.getGenerator(), x, z), // middle block
+						height(blocks[3], t.getGenerator(), x, z),// upper block
+						height(blocks[4], t.getGenerator(), x, z), }; // upper2 block
 				log("b0=" + b[0] + " b1=" + b[1] + " b2=" + b[2] + " b3=" + b[3] + " b4=" + b[4]);
 				// if lower block is max then upper block must be?
 				if (b[0] >= dim) {
